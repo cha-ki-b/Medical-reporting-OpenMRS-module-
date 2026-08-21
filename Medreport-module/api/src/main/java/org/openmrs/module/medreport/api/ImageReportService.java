@@ -1,6 +1,7 @@
 package org.openmrs.module.medreport.api;
 
 import org.openmrs.Patient;
+import org.openmrs.User;
 import org.openmrs.annotation.Authorized;
 import org.openmrs.api.OpenmrsService;
 import org.openmrs.module.medreport.MedreportPrivileges;
@@ -76,6 +77,29 @@ public interface ImageReportService extends OpenmrsService {
     /** The rendered document of a version, for download. */
     @Authorized({ MedreportPrivileges.VIEW_MEDICAL_REPORTS })
     byte[] getDocument(String versionUuid);
+
+    /**
+     * Cross-patient search, filterable by a set of authors AND a set of images at once - the
+     * question "what did user2 write about studies 5 and 6" in one call.
+     *
+     * <p>Requires only {@code medreport.imaging.view}: RP2 already says a user holding the
+     * read privilege may read any author's report, so being able to <em>find</em> them by
+     * author discloses nothing they could not already open. Editing and removing remain
+     * author-only, unchanged.
+     *
+     * @param authorIds  null/empty = any author
+     * @param studyUids  null/empty = any image
+     */
+    @Authorized({ MedreportPrivileges.VIEW_MEDICAL_REPORTS })
+    List<ImageReport> searchReports(List<Integer> authorIds, List<String> studyUids, int limit);
+
+    /** Authors who have written at least one report, for populating the author filter. */
+    @Authorized({ MedreportPrivileges.VIEW_MEDICAL_REPORTS })
+    List<User> getReportAuthors();
+
+    /** Images covered by at least one report, for populating the image filter. */
+    @Authorized({ MedreportPrivileges.VIEW_MEDICAL_REPORTS })
+    List<ReportImageLink> getReportedImages();
 
     // -- update / remove --------------------------------------------------
 

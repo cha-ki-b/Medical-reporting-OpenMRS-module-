@@ -5,6 +5,7 @@ import org.openmrs.User;
 import org.openmrs.module.medreport.api.model.ImageReport;
 import org.openmrs.module.medreport.api.model.ImageReportVersion;
 import org.openmrs.module.medreport.api.model.MedreportOperationLog;
+import org.openmrs.module.medreport.api.model.ReportImageLink;
 import org.openmrs.module.medreport.api.model.UserReportPreference;
 
 import java.util.List;
@@ -40,6 +41,26 @@ public interface MedreportDao {
     List<ImageReport> getReportsForSeries(String orthancSeriesUid, boolean includeVoided);
 
     List<ImageReport> getReportsForPatient(Patient patient, boolean includeVoided);
+
+    /**
+     * Cross-patient search: reports whose author is in {@code authorIds} AND whose current
+     * version covers at least one study in {@code studyUids}. Either list may be null or
+     * empty, meaning "no constraint on that axis" - so the two filters compose, which is what
+     * makes "everything user2 wrote about studies 5 and 6" a single query.
+     *
+     * <p>Ordered newest first.
+     */
+    List<ImageReport> searchReports(List<Integer> authorIds, List<String> studyUids,
+                                    boolean includeVoided, int limit);
+
+    /** Authors who have actually written a report - the only useful contents of an author filter. */
+    List<User> getDistinctAuthors(boolean includeVoided);
+
+    /**
+     * Images that at least one report covers, newest report first. Populates the image filter
+     * with exactly the studies worth filtering on, rather than every study in Orthanc.
+     */
+    List<ReportImageLink> getDistinctReportedImages(boolean includeVoided);
 
     // -- versions --------------------------------------------------------
 

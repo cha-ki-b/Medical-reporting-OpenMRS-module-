@@ -8,5 +8,25 @@
     "icon": "icon-file-alt",
     "order": 2,
     "requiredPrivilege": "App: medreport.dashboardGenerate"
+  },
+  {
+    "id": "medreport.patientDashboard.imagingReports",
+    "extensionPointId": "patientDashboard.overallActions",
+    "type": "link",
+    "label": "Comptes rendus d'imagerie",
+    "url": "medreport/imagingReports.page?patientId={{patient.uuid}}",
+    "icon": "icon-folder-open",
+    "order": 3,
+    "requiredPrivilege": "App: medreport.imaging.view"
+  },
+  {
+    "id": "medreport.home.reportSearch",
+    "extensionPointId": "org.openmrs.referenceapplication.homepageLink",
+    "type": "link",
+    "label": "Comptes rendus d'imagerie",
+    "url": "medreport/myReports.page",
+    "icon": "icon-search",
+    "order": 120,
+    "requiredPrivilege": "App: medreport.imaging.view"
   }
 ]

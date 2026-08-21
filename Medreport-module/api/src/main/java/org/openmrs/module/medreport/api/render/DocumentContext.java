@@ -43,6 +43,13 @@ public class DocumentContext {
 
     private Options options = new Options();
 
+    /**
+     * Free text the clinician typed in the personalisation window, reproduced verbatim at the
+     * very end of the document and never translated - it is the author's own words.
+     */
+    @JsonProperty("doctor_observation")
+    private String doctorObservation;
+
     @JsonProperty("generated_at")
     private String generatedAt;
 
@@ -126,6 +133,14 @@ public class DocumentContext {
 
     public void setOptions(Options options) {
         this.options = options;
+    }
+
+    public String getDoctorObservation() {
+        return doctorObservation;
+    }
+
+    public void setDoctorObservation(String doctorObservation) {
+        this.doctorObservation = doctorObservation;
     }
 
     public String getGeneratedAt() {

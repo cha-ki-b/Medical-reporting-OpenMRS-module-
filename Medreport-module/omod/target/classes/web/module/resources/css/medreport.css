@@ -745,3 +745,53 @@
     clip: rect(0 0 0 0);
     white-space: nowrap;
 }
+
+/* A shorter textarea for the doctor's observation panel in the right-hand rail, where the
+   full 190px height of .mr-textarea would push the action buttons below the fold. */
+.mr-textarea-short {
+    min-height: 120px;
+}
+
+/* ---------- cross-patient search page ---------- */
+
+/* Author and image filters side by side: they are two axes of one query, so showing them
+   together makes the intersection obvious. Collapses to one column on narrow screens. */
+.mr-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+}
+
+.mr-filter-grid .mr-picker {
+    max-height: 230px;
+}
+
+/* The prominent entry point placed ABOVE the studies table on the imaging page. Styled as a
+   banner rather than a plain link because the previous inline panel was missed entirely by
+   users who never scrolled that far. */
+.mr-entry-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: var(--mr-accent-soft);
+    border: 1px solid var(--mr-border);
+    border-left: 4px solid var(--mr-accent);
+    border-radius: var(--mr-radius);
+    padding: .7rem 1rem;
+    margin: 0 0 1rem;
+    font-size: 14px;
+    color: var(--mr-text);
+}
+
+.mr-entry-banner strong {
+    color: var(--mr-accent);
+}
+
+.mr-entry-banner .mr-entry-hint {
+    display: block;
+    color: var(--mr-muted);
+    font-size: .85rem;
+    margin-top: .1rem;
+}

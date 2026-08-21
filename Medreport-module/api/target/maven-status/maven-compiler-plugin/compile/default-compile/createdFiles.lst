@@ -9,6 +9,7 @@ org\openmrs\module\medreport\api\model\MedreportOperationLog.class
 org\openmrs\module\medreport\api\model\ImageReport.class
 org\openmrs\module\medreport\api\render\DocumentContext$PatientRef.class
 org\openmrs\module\medreport\api\spi\DataSource.class
+org\openmrs\module\medreport\api\catalog\ImagingStudyLookup.class
 org\openmrs\module\medreport\api\render\DocumentContext$Record.class
 org\openmrs\module\medreport\api\dao\MedreportDao.class
 org\openmrs\module\medreport\api\render\RenderedDocument.class
