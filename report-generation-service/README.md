@@ -1,4 +1,4 @@
-# Report Generation Service (v2)
+# Report Generation Service (v2.1.0)
 
 Stateless rendering service behind the OpenMRS **`medreport`** module. It turns a
 JSON description of a report into a **DOCX / PDF / HTML / ODT** document in
@@ -47,8 +47,14 @@ DocumentContext
 │   ├── fields[]          ← { label, value, type, unit, emphasis }  → "Label : value"
 │   ├── records[]         ← repeating occurrences (lab draws, follow-up visits)
 │   └── subsections[]     ← recursive
-└── image_observations[]  ← "image id : observation" from use case 1
+├── image_observations[]  ← "image id : observation" from use case 1
+└── doctor_observation    ← the clinician's own closing text, rendered LAST
 ```
+
+`doctor_observation` is a top-level string rather than a trailing `Section` on purpose:
+sections all render *before* the imaging observations, and this has to come after everything
+the report drew from the record. Its heading is localised (page furniture); its body is
+reproduced exactly as typed and never translated.
 
 Labels arrive already translated. Clinical vocabulary lives in the OpenMRS
 message bundles and concept dictionary; duplicating it here would create a
@@ -224,13 +230,14 @@ can read one as a worked example. They cannot be deleted via the API.
 ./.venv/Scripts/python -m pytest tests -q
 ```
 
-**46 tests**, in three files:
+**55 tests**, in four files:
 
 | File | Tests | Covers |
 | --- | --- | --- |
 | `test_render.py` | 27 | token enforcement (missing / wrong / bearer), template CRUD and built-in protection, DOCX content, unit and boolean formatting, empty-field handling, all three languages with direction assertions, Arabic RTL + complex-script font in the DOCX XML, the empty-document case, preview availability, PDF graceful degradation, both v1 payload shapes, path-traversal rejection, artifact deletion, TTL sweeping, filename sanitisation, preview cache headers |
 | `test_conversion.py` | 15 | the LibreOffice path: command construction, per-conversion private profile, output discovery, failure / timeout / silent-non-production, PDF end-to-end, preview fallback |
 | `test_compat.py` | 4 | the interpreter floor (§3), including a self-checking detector for the f-string regression described below |
+| `test_doctor_observation.py` | 9 | verbatim reproduction, **position last in the document**, localised heading with an untranslated body, HTML escaping, blank and observation-only documents |
 
 The suite passes with **and without** LibreOffice installed — `test_render.py`
 branches on `renderer.pdf_available()`, and `test_conversion.py` fakes the
@@ -249,3 +256,36 @@ detector against the exact offending line, because two obvious detection
 approaches silently do not work (`ast.parse(feature_version=…)` does not reject
 it, and scanning `tokenize` output does not either, since on 3.12 an f-string is
 no longer a single token).
+
+---
+
+## 9. Release history
+
+### 2.1.0 — current
+
+- **`doctor_observation`** added to `DocumentContext` (§2): the clinician's own free text,
+  rendered last in both the DOCX and HTML layouts. Heading localised in fr/en/ar; body
+  reproduced verbatim.
+- `/health` now reports `"version": "2.1.0"`.
+- **Backward compatible.** The field is optional, so a medreport 1.0.0 caller that never sends
+  it behaves exactly as before. Conversely medreport 1.1.0 talking to a 2.0.0 service simply
+  loses the observation block — no error, since the service ignores unknown fields. Upgrading
+  both is still recommended.
+- Added a `.dockerignore` so `.env` (the shared token) and `output/` (rendered PHI) can never
+  reach an image layer. The Dockerfile only copies `app/` and `templates/`, so this is defence
+  in depth against a future `COPY . .`.
+- `docker-compose.yml`: the OpenMRS network is now `${OPENMRS_NETWORK:-openmrs-orthanc-integration_default}`
+  instead of a hard-coded `openmrs-net` that did not exist on the deployment host, and
+  `scripts/setup-env.sh` writes it correctly by looking it up.
+
+### 2.0.0
+
+Rewrite of the v1 renderer. Generic self-describing `DocumentContext` instead of one Pydantic
+model per template, four output formats, three languages with RTL, the template-profile
+registry, opaque artifact ids (v1's `GET /download?path=…` was an arbitrary-file-read), TTL
+retention, and the shared-token guard.
+
+**Post-release fix, before 2.1.0:** `layout_html.py` contained a backslash inside an f-string
+expression — legal on Python 3.12 (PEP 701), a `SyntaxError` on 3.11. Because it broke
+*import*, the whole service and its entire test suite went down from that one line on a 3.11
+host. The interpreter floor is now documented as 3.11 and enforced by `test_compat.py`.

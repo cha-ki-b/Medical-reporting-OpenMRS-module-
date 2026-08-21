@@ -13,7 +13,7 @@ Two capabilities, one module:
    downloads it.
 
 **Target platform:** OpenMRS Platform 2.5.9 / Reference Application 2.12.2
-**Module ID:** `medreport` · **Package:** `org.openmrs.module.medreport` · **Version:** `1.0.0`
+**Module ID:** `medreport` · **Package:** `org.openmrs.module.medreport` · **Version:** `1.1.0`
 
 ---
 
@@ -194,8 +194,34 @@ Opened by the dashboard button (`medreport_extension.json`, privilege-gated).
 - **Presentation options** — show empty fields, table of contents, signature block, page
   numbers, confidentiality notice, include imaging observations.
 - **Preview before download**, in a modal, every time.
+- **Doctor observations** — a free-text box whose contents are appended **verbatim at the very
+  end** of the document, after the imaging observations. Never translated (they are the
+  author's own words) and, deliberately, **never saved as a preference** — see below.
 - **Preferences persist per user** (`medreport_user_preference`), so the second report starts
   from the first one's choices.
+
+### What "language" does and does not translate
+
+Switching language re-fetches the catalogue and re-renders the document, so **section titles,
+field labels, the patient banner, headings, booleans (Oui/Yes/نعم), units and the
+confidentiality notice** all change.
+
+**Clinical values do not.** "Méningiome frontal" is free text a clinician typed into
+patientview; translating it would be inventing content. The same applies to the doctor's
+observation, which is reproduced exactly as written.
+
+If labels stay French after switching to Arabic, the cause is almost always a **stale
+`patientview` omod** — the fr/en/ar labels live in that module's `medreport-datasource.json`,
+so medreport can only show what the installed contributor declares.
+
+### Why the observation is not persisted
+
+`savePreferences` strips `doctorObservation` server-side before writing the row. An
+observation belongs to one patient on one day; having it reappear pre-filled on the next
+patient's report is a clinical-safety problem, not a convenience. It is stripped on the server
+rather than in the UI so no front-end mistake can reintroduce it, and the stripping copies the
+request rather than mutating it — `generate()` may still be holding the same instance.
+`DoctorObservationTest` covers both halves.
 
 ### Privilege coherence
 
@@ -232,6 +258,37 @@ a version, so an update archives instead of overwriting.
 rewrite history. Neither entity holds a foreign key to the other. Images are referenced by
 Orthanc/DICOM UID rather than by a foreign key into the imaging module's schema — Orthanc
 stays the source of truth.
+
+### Where clinicians reach it
+
+| From | Goes to |
+| --- | --- |
+| Patient dashboard → **Comptes rendus d'imagerie** | `medreport/imagingReports.page` |
+| Imaging → studies, **banner above the table** | the same page |
+| Imaging → series, per-row document icon | the same page, editor pre-opened on that series |
+| Home page → **Comptes rendus d'imagerie** | `medreport/myReports.page` (cross-patient search) |
+
+The reports panel used to be embedded at the *bottom* of the imaging module's studies page.
+That failed twice: clinicians never scrolled far enough to find it, and it disappeared
+entirely on the "Get studies" navigation. It now lives on its own page, reached from a banner
+placed **above** the studies table, which fixes both.
+
+Because that page is medreport's own, it needs the patient's study list for the image picker.
+`ImagingStudyLookup` obtains it by calling `DicomStudyService` **reflectively** — the same
+technique the clinical-data registry uses (§4), so there is still no compile-time dependency
+on the imaging module. Every failure mode (module absent, method renamed, Orthanc down)
+degrades to an empty picker plus the paste-a-UID fallback.
+
+### Cross-patient search
+
+`medreport/myReports.page` answers "what did user2 write about studies 5 and 6". Two
+**independent filter sets that intersect**: authors × images. Both lists are populated only
+from values that actually occur in reports, so every entry returns at least one result.
+
+Gated on `medreport.imaging.view`, not on a new privilege: RP2 already lets that privilege
+read *any* author's report, so being able to **find** them by author discloses nothing the
+user could not already open. Editing and removing remain author-only. `ReportSearchTest` pins
+that reasoning so it is not silently tightened later.
 
 ### Lifecycle
 
@@ -325,19 +382,27 @@ cd Medreport-module && mvn clean install
 cd report-generation-service && ./.venv/Scripts/python -m pytest tests -q
 ```
 
-**132 tests, all passing** (counts verified by running the suites, not asserted from memory):
+**Measured on the last clean build** (counts come from running the suites, not from memory —
+an earlier revision of this file overstated them and an audit caught it):
 
-| Suite | Count | Covers |
+| Suite | Tests | Covers |
 | --- | --- | --- |
 | `report-generation-service` — `test_render.py` | 27 | auth, templates, DOCX content, 3 languages + direction, Arabic RTL/complex-script font, empty-field handling, preview availability, both v1 payloads, path traversal, TTL sweep, filename sanitisation, cache headers |
 | `report-generation-service` — `test_conversion.py` | 15 | LibreOffice command construction, private profile, output discovery, failure/timeout/silent-non-production, PDF end-to-end, preview fallback |
 | `report-generation-service` — `test_compat.py` | 4 | Python 3.11 floor; self-checking f-string-backslash detector |
+| `report-generation-service` — `test_doctor_observation.py` | 9 | verbatim text, **position last in the document**, localised heading with untranslated body, HTML escaping, blank/observation-only cases |
 | `medreport api` — `ImageReportServiceRulesTest` | 26 | RP1–RP9 individually |
 | `medreport api` — `ReportPrivilegeCoherenceTest` | 16 | catalogue filtering, forged-selection rejection, value formatting |
 | `medreport api` — `DataSourceManifestTest` | 12 | manifest schema against a copy of the real one |
-| `medreport omod` — `ModuleWiringTest` | 23 | packaging, privilege-enforcement scan, **JS-escaping scan**, Liquibase, GSP braces, i18n, CSS namespace |
-| `medreport omod` — `GspTemplateParseTest` | 3 | **compiles every `.gsp` through Groovy's `SimpleTemplateEngine`** — the engine the UI Framework actually uses |
+| `medreport api` — `ReportSearchTest` | 6 | both filter axes, empty axis = no constraint, soft-deleted exclusion, privilege level |
+| `medreport api` — `DoctorObservationTest` | 6 | passthrough, and that it is **stripped from saved preferences** without mutating the caller |
+| `medreport omod` — `ModuleWiringTest` | 23 | packaging, privilege-enforcement scan, JS-escaping scan, Liquibase, GSP braces, i18n, CSS namespace |
+| `medreport omod` — `GspTemplateParseTest` | 3 | compiles every `.gsp` through Groovy's `SimpleTemplateEngine` — the engine the UI Framework actually uses |
 | `patientview api` — `MedreportDatasourceManifestTest` | 6 | manifest ↔ service signatures ↔ DAO map keys; absence of a medreport dependency |
+
+**153 tests written for this work** (55 Python + 66 medreport api + 26 medreport omod + 6 in
+patientview). Running every suite in the three modules plus the service gives **189 passing**,
+the remainder being patientview's pre-existing tests.
 
 `make_samples.py` renders a representative report in every language/format into `samples/`.
 
@@ -395,7 +460,65 @@ cd report-generation-service && docker compose up --build -d && curl -fsS localh
 
 ---
 
-## 11. Known limitations
+## 11. Release history
+
+Versions follow semver: a **minor** bump for new capability, a **patch** bump for fixes only.
+
+### 1.1.0 — current
+
+Adds three capabilities and fixes two defects found in hospital testing. Requires
+`patientview` **1.2.2** to show Arabic/English clinical labels, and `imaging`
+**1.1.2-SNAPSHOT** for the new entry points.
+
+**New**
+
+- **Doctor observations** (§5) — free-text box in the personalisation window, appended verbatim
+  at the very end of the document. Never translated, never persisted as a preference.
+- **Standalone imaging-reports page** (`medreport/imagingReports.page`, §6) reached from a
+  banner **above** the studies table, replacing the panel that used to sit at the bottom of the
+  imaging module's page.
+- **Cross-patient search** (`medreport/myReports.page`, §6) — filter by a set of authors × a
+  set of images, e.g. "everything user2 wrote about studies 5 and 6".
+- `ImagingStudyLookup` — reflective study lookup so the new page can offer an image picker with
+  no compile-time dependency on the imaging module.
+- Two new dashboard links and one home-page link in `medreport_extension.json`.
+
+**Fixed**
+
+- **Changing the report language had no effect on the generated document.**
+  `applyPreferences()` ran on every language change, and it calls
+  `setSegment('mr-language', prefs.language)` — so choosing English fetched the catalogue in
+  English and then immediately snapped the language button back to the saved value.
+  `buildRequest()` reads that button, so the report came out in the old language.
+- **Changing the language reset every "information to include" checkbox**, same root cause:
+  the saved selection was re-applied along with the saved language.
+
+  Both fixed by splitting catalogue loading from preference application:
+  `loadCatalog(applyStoredPrefs, carriedSelection)`. Preferences apply once, on first load; a
+  language switch carries the live selection across instead (section ids are
+  language-independent, so it transfers cleanly).
+
+**API additions** — `ImageReportService.searchReports/getReportAuthors/getReportedImages`,
+`ReportRequest.doctorObservation`, `DocumentContext.doctorObservation`. No schema change, so
+**no Liquibase migration and no database work** on upgrade.
+
+### 1.0.0
+
+First release. Both use cases, RP1–RP9, the contributor SPI, the audit log, the many-to-many
+report↔image model, and fr/en/ar rendering.
+
+Two defects were found and fixed during its initial hospital deployment, before 1.1.0:
+
+- a backslash inside an f-string expression in the renderer's `layout_html.py` — valid on
+  Python 3.12, a `SyntaxError` on 3.11, and fatal at *import*, so it took the whole service
+  down. Now guarded by `test_compat.py`.
+- JSP-style `<%-- --%>` comments in two GSP templates, which Groovy's `SimpleTemplateEngine`
+  does not support — the Imagerie tab rendered a full-page *UI Framework Error*. Now guarded
+  by `GspTemplateParseTest`. Use `<% /* … */ %>` for a server-side comment.
+
+---
+
+## 12. Known limitations
 
 - No CSRF token on the `.form` POST endpoints — matches the surrounding legacy OpenMRS UI
   framework convention; a pre-existing ecosystem gap, not introduced here.
