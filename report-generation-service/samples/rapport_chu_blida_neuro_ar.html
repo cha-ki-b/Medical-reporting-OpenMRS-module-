@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>التقرير الطبي الكامل</title>
+<style>
+  :root {
+    --accent: #1B5E20; --accent-soft: #E3F0E4; --rule: #BBD5BD;
+    --zebra: #F5F8FB; --muted: #5A5A5A; --text: #1A1A1A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0 0 3rem; background: #eef1f5; color: var(--text);
+    font-family: 'Segoe UI', 'Noto Naskh Arabic', 'Arial', sans-serif; font-size: 10.5pt; line-height: 1.55;
+  }
+  .sheet {
+    max-width: 21cm; margin: 1.2rem auto; background: #fff; padding: 1.6cm 1.8cm 1.2cm;
+    box-shadow: 0 2px 16px rgba(0,0,0,.12); border-top: 6px solid var(--accent);
+  }
+  .brand { font-size: .82em; font-weight: 700; color: var(--accent);
+            letter-spacing: .04em; margin-bottom: .6rem; }
+  h1 { font-size: 1.85em; color: var(--accent); text-align: center;
+        margin: .2rem 0 .1rem; }
+  .subtitle { text-align: center; color: var(--muted); font-style: italic;
+               margin: 0 0 1rem; }
+  .banner { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+             gap: .1rem .8rem; background: var(--accent-soft);
+             padding: .7rem .9rem; border-radius: 4px; margin-bottom: 1.2rem; }
+  .bi { display: flex; gap: .4rem; font-size: .88em; }
+  .bi span { color: var(--accent); font-weight: 600; }
+  .bi span::after { content: " :"; }
+  .toc { border: 1px solid var(--rule); border-radius: 4px; padding: .4rem 1rem 1rem;
+          margin-bottom: 1.4rem; }
+  .toc ol { margin: 0; padding-right: 1.2rem; }
+  .sec { margin: 0 0 1.1rem; break-inside: avoid; }
+  .sec h2 { font-size: 1.12em; color: var(--accent); text-transform: uppercase;
+             letter-spacing: .03em; border-bottom: 2px solid var(--accent);
+             padding-bottom: .18rem; margin: 1.3rem 0 .5rem; }
+  .sec h3 { font-size: 1em; color: var(--accent); margin: .9rem 0 .35rem; }
+  .sec-desc, .sec-note { color: var(--muted); font-style: italic; font-size: .88em;
+                          margin: .2rem 0 .5rem; }
+  table.kv { width: 100%; border-collapse: collapse; margin: 0 0 .5rem; }
+  table.kv tr:nth-child(even) { background: var(--zebra); }
+  table.kv th, table.kv td { text-align: right;
+      padding: .3rem .55rem; border-bottom: 1px solid var(--rule);
+      vertical-align: top; font-weight: 400; }
+  table.kv th { width: 34%; color: var(--muted);
+                 font-weight: 600; }
+  table.kv th::after { content: " :"; }
+  table.kv td.em { font-weight: 700; }
+  .longtext { margin: .5rem 0 .7rem; }
+  .longtext h4 { margin: 0 0 .2rem; font-size: .95em; color: var(--muted); }
+  .longtext h4::after { content: " :"; }
+  .longtext p { margin: 0 0 .25rem; }
+  .record { border-right: 3px solid var(--accent-soft);
+             padding-right: .7rem; margin: .5rem 0 .8rem; }
+  .rec-title { font-weight: 700; background: var(--accent-soft);
+                padding: .2rem .5rem; border-radius: 3px; display: inline-block;
+                margin-bottom: .3rem; }
+  .rec-sub { color: var(--muted); font-style: italic; font-size: .87em;
+              margin-bottom: .3rem; }
+  .obs { border: 1px solid var(--rule); border-radius: 4px; padding: .6rem .8rem;
+          margin: 0 0 .7rem; }
+  .obs-id { font-weight: 700; color: var(--accent); }
+  .obs-meta { color: var(--muted); font-size: .85em; font-style: italic;
+               margin-bottom: .35rem; }
+  .obs-body p { margin: 0 0 .25rem; }
+  .signature { margin-top: 2.2rem; text-align: left; }
+  .signature span { color: var(--muted); font-weight: 600; font-size: .88em; }
+  .sig-line { border-bottom: 1px solid var(--muted); width: 7cm; height: 2.2rem;
+               margin-right: auto; }
+  .signature em { font-size: .88em; color: var(--muted); }
+  .confidential { margin-top: 1.4rem; background: var(--accent-soft); color: var(--muted);
+                   font-style: italic; font-size: .84em; text-align: center;
+                   padding: .5rem .8rem; border-radius: 4px; }
+  .page-footer { text-align: center; color: var(--muted); font-size: .8em;
+                  margin-top: 1rem; }
+  .empty { text-align: center; color: var(--muted); font-style: italic;
+            padding: 2.5rem 0; }
+  @media print {
+    body { background: #fff; }
+    .sheet { box-shadow: none; margin: 0; max-width: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="brand">المستشفى الجامعي بالبليدة — قسم جراحة الأعصاب</div>
+  <h1>التقرير الطبي الكامل</h1>
+  <p class="subtitle">قسم جراحة الأعصاب — ملخص ما قبل الجراحة</p>
+  <div class="banner"><div class="bi"><span>المريض</span><strong>BENALI Yacine</strong></div><div class="bi"><span>المعرّف</span><strong>CHU-2026-00412</strong></div><div class="bi"><span>تاريخ الميلاد</span><strong>12/04/1978</strong></div><div class="bi"><span>العمر</span><strong>48</strong></div><div class="bi"><span>الجنس</span><strong>M</strong></div><div class="bi"><span>حرّره</span><strong>Dr. Amina Kaci</strong></div><div class="bi"><span>تاريخ الإصدار</span><strong>17/08/2026 12:14</strong></div><div class="bi"><span>المرجع</span><strong>RPT-2026-0142</strong></div></div>
+  <nav class="toc"><h2>المحتويات</h2><ol><li>البيانات الديموغرافية</li><li>التشخيص الجراحي العصبي</li></ol></nav>
+  <section class="sec lvl1"><h2>البيانات الديموغرافية</h2><table class="kv"><tr><th scope="row">المهنة</th><td>أستاذ</td></tr><tr><th scope="row">البلدية</th><td>البليدة</td></tr></table></section><section class="sec lvl1"><h2>التشخيص الجراحي العصبي</h2><table class="kv"><tr><th scope="row">التشخيص</th><td class="em">ورم سحائي جبهي</td></tr><tr><th scope="row">الجانب</th><td>أيسر</td></tr><tr><th scope="row">الحجم</th><td>32 مم</td></tr><tr><th scope="row">انتكاس</th><td>لا</td></tr></table></section>
+  <section class="sec lvl1"><h2>ملاحظات التصوير</h2><div class="obs"><div class="obs-id">التصوير بالرنين المغناطيسي — 14/08/2026</div><div class="obs-meta">MR  ·  د. أمينة قاسي</div><div class="obs-body"><p>آفة خارج المحور في الفص الجبهي الأيسر بقطر 32 مم.</p></div></div></section>
+  <div class="signature"><span>التوقيع والختم</span><div class="sig-line"></div><em>Dr. Amina Kaci</em></div>
+  <div class="confidential">وثيقة طبية سرية — مخصصة للموظفين المصرح لهم فقط.</div>
+  <div class="page-footer">المستشفى الجامعي بالبليدة — قسم جراحة الأعصاب  ·  وثيقة أُنشئت آليًا بواسطة OpenMRS / medreport.</div>
+</div>
+</body>
+</html>

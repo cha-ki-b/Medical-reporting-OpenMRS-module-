@@ -1,0 +1,25 @@
+{
+  "id": "chu_blida_imaging",
+  "builtin": true,
+  "label": {
+    "fr": "CHU Blida — Compte rendu d'imagerie",
+    "en": "CHU Blida — Imaging report",
+    "ar": "المستشفى الجامعي البليدة — تقرير التصوير"
+  },
+  "description": {
+    "fr": "Compte rendu d'observation sur imagerie DICOM (cas d'usage 1).",
+    "en": "DICOM imaging observation report (use case 1).",
+    "ar": "تقرير ملاحظات التصوير الطبي (حالة الاستخدام 1)."
+  },
+  "engine": "builtin",
+  "style": {
+    "accent": "4A148C",
+    "accent_soft": "EDE3F5",
+    "rule": "D3C2E4"
+  },
+  "header_text": {
+    "fr": "CHU de Blida — Imagerie médicale",
+    "en": "CHU Blida — Medical imaging",
+    "ar": "المستشفى الجامعي بالبليدة — التصوير الطبي"
+  }
+}

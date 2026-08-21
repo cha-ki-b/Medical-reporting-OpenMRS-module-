@@ -1,0 +1,19 @@
+{
+  "id": "generic_clinical",
+  "builtin": true,
+  "label": {
+    "fr": "Rapport clinique standard",
+    "en": "Standard clinical report",
+    "ar": "تقرير سريري قياسي"
+  },
+  "description": {
+    "fr": "Mise en page neutre, deux colonnes « Donnée : valeur », adaptée à toutes les sections.",
+    "en": "Neutral two-column “Data : value” layout, suitable for any selection of sections.",
+    "ar": "تخطيط محايد من عمودين «البيان: القيمة» يناسب جميع الأقسام."
+  },
+  "engine": "builtin",
+  "style": {
+    "accent": "1F4E79",
+    "accent_soft": "DEEAF6"
+  }
+}

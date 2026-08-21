@@ -1,0 +1,33 @@
+# Keep the build context small and, more importantly, keep two things out of image layers:
+#
+#   .env     the shared token. An image layer is readable by anyone who can pull the image,
+#            and `docker history` survives deleting the file in a later layer.
+#   output/  rendered documents. These contain PHI and are meant to be transient - in the
+#            deployment they live on a tmpfs precisely so they never touch a disk.
+#
+# The Dockerfile only COPYs `app/` and `templates/`, so nothing here is required for the
+# build to work; this is defence in depth against a future COPY . .
+
+.env
+.env.*
+output/
+samples/
+
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+.git/
+.gitignore
+.idea/
+.vscode/
+
+tests/
+scripts/make_samples.py
+
+*.log
+*.tmp

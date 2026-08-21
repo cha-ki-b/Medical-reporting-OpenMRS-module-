@@ -1,0 +1,50 @@
+# Deployment snippet for Server 1 (architecture §3).
+#
+# The service is deliberately NOT published on a host port: only OpenMRS talks to it, over the
+# private docker network, and it is additionally protected by the shared token. Publishing it
+# would expose a PHI-rendering endpoint on the hospital LAN for no benefit.
+services:
+  report-generation-service:
+    build: .
+    # This name is also the hostname OpenMRS resolves, so it must match the host part of the
+    # medreport.renderService.baseUrl global property (default http://medreport-rgs:8300).
+    container_name: medreport-rgs
+    restart: unless-stopped
+    environment:
+      # Required. Generate with: openssl rand -hex 32
+      MEDREPORT_RGS_TOKEN: ${MEDREPORT_RGS_TOKEN:?set MEDREPORT_RGS_TOKEN in .env}
+      MEDREPORT_ARTIFACT_TTL_MINUTES: "30"
+      MEDREPORT_PDF_TIMEOUT_SECONDS: "60"
+    volumes:
+      - medreport-templates:/var/lib/medreport/templates
+      # Generated documents are transient; a tmpfs keeps PHI off the disk entirely and
+      # guarantees they do not survive a restart.
+      - type: tmpfs
+        target: /var/lib/medreport/output
+        tmpfs:
+          size: 268435456
+    networks:
+      - openmrs
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  medreport-templates:
+
+networks:
+  # This must be the network the OpenMRS container is ALREADY on, otherwise OpenMRS cannot
+  # resolve the hostname `medreport-rgs` and every render fails with a connection error.
+  #
+  # Compose names a network `<project>_<network>`, so a stack brought up from a directory
+  # called `openmrs-orthanc-integration` with a `default` network ends up as
+  # `openmrs-orthanc-integration_default` - which is what Server 1 actually runs today.
+  #
+  # Find the real value with:
+  #     docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' openmrs-app
+  #
+  # then either export it before `docker compose up`:
+  #     export OPENMRS_NETWORK=openmrs-orthanc-integration_default
+  # or set OPENMRS_NETWORK in the .env file next to this compose file.
+  openmrs:
+    external: true
+    name: ${OPENMRS_NETWORK:-openmrs-orthanc-integration_default}

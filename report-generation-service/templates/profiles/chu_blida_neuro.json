@@ -1,0 +1,30 @@
+{
+  "id": "chu_blida_neuro",
+  "builtin": true,
+  "label": {
+    "fr": "CHU Blida — Neurochirurgie",
+    "en": "CHU Blida — Neurosurgery",
+    "ar": "المستشفى الجامعي البليدة — جراحة الأعصاب"
+  },
+  "description": {
+    "fr": "En-tête du service de neurochirurgie du CHU Blida, avec bloc de signature.",
+    "en": "CHU Blida neurosurgery department letterhead, with signature block.",
+    "ar": "ترويسة قسم جراحة الأعصاب بالمستشفى الجامعي البليدة مع خانة التوقيع."
+  },
+  "engine": "builtin",
+  "style": {
+    "accent": "1B5E20",
+    "accent_soft": "E3F0E4",
+    "rule": "BBD5BD"
+  },
+  "header_text": {
+    "fr": "CHU de Blida — Service de Neurochirurgie",
+    "en": "CHU Blida — Department of Neurosurgery",
+    "ar": "المستشفى الجامعي بالبليدة — قسم جراحة الأعصاب"
+  },
+  "footer_text": {
+    "fr": "CHU de Blida — Service de Neurochirurgie",
+    "en": "CHU Blida — Department of Neurosurgery",
+    "ar": "المستشفى الجامعي بالبليدة — قسم جراحة الأعصاب"
+  }
+}

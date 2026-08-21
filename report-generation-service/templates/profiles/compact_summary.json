@@ -1,0 +1,25 @@
+{
+  "id": "compact_summary",
+  "builtin": true,
+  "label": {
+    "fr": "Synthèse compacte",
+    "en": "Compact summary",
+    "ar": "ملخص مختصر"
+  },
+  "description": {
+    "fr": "Version dense sur peu de pages, utile pour un transfert ou une réunion de staff.",
+    "en": "Dense few-page version, useful for a transfer or a staff meeting.",
+    "ar": "نسخة مكثفة في صفحات قليلة، مفيدة للتحويل أو اجتماع الفريق."
+  },
+  "engine": "builtin",
+  "style": {
+    "accent": "37474F",
+    "accent_soft": "ECEFF1",
+    "rule": "CFD8DC",
+    "title_size": 16,
+    "heading_size": 11,
+    "base_size": 9,
+    "show_patient_banner": true,
+    "show_accent_bar": false
+  }
+}

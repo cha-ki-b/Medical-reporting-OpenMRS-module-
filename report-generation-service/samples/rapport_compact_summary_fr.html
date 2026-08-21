@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rapport médical complet</title>
+<style>
+  :root {
+    --accent: #37474F; --accent-soft: #ECEFF1; --rule: #CFD8DC;
+    --zebra: #F5F8FB; --muted: #5A5A5A; --text: #1A1A1A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0 0 3rem; background: #eef1f5; color: var(--text);
+    font-family: 'Segoe UI', 'Calibri', 'Helvetica Neue', Arial, sans-serif; font-size: 9.0pt; line-height: 1.55;
+  }
+  .sheet {
+    max-width: 21cm; margin: 1.2rem auto; background: #fff; padding: 1.6cm 1.8cm 1.2cm;
+    box-shadow: 0 2px 16px rgba(0,0,0,.12); border-top: 6px solid var(--accent);
+  }
+  .brand { font-size: .82em; font-weight: 700; color: var(--accent);
+            letter-spacing: .04em; margin-bottom: .6rem; }
+  h1 { font-size: 1.85em; color: var(--accent); text-align: center;
+        margin: .2rem 0 .1rem; }
+  .subtitle { text-align: center; color: var(--muted); font-style: italic;
+               margin: 0 0 1rem; }
+  .banner { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+             gap: .1rem .8rem; background: var(--accent-soft);
+             padding: .7rem .9rem; border-radius: 4px; margin-bottom: 1.2rem; }
+  .bi { display: flex; gap: .4rem; font-size: .88em; }
+  .bi span { color: var(--accent); font-weight: 600; }
+  .bi span::after { content: " :"; }
+  .toc { border: 1px solid var(--rule); border-radius: 4px; padding: .4rem 1rem 1rem;
+          margin-bottom: 1.4rem; }
+  .toc ol { margin: 0; padding-left: 1.2rem; }
+  .sec { margin: 0 0 1.1rem; break-inside: avoid; }
+  .sec h2 { font-size: 1.12em; color: var(--accent); text-transform: uppercase;
+             letter-spacing: .03em; border-bottom: 2px solid var(--accent);
+             padding-bottom: .18rem; margin: 1.3rem 0 .5rem; }
+  .sec h3 { font-size: 1em; color: var(--accent); margin: .9rem 0 .35rem; }
+  .sec-desc, .sec-note { color: var(--muted); font-style: italic; font-size: .88em;
+                          margin: .2rem 0 .5rem; }
+  table.kv { width: 100%; border-collapse: collapse; margin: 0 0 .5rem; }
+  table.kv tr:nth-child(even) { background: var(--zebra); }
+  table.kv th, table.kv td { text-align: left;
+      padding: .3rem .55rem; border-bottom: 1px solid var(--rule);
+      vertical-align: top; font-weight: 400; }
+  table.kv th { width: 34%; color: var(--muted);
+                 font-weight: 600; }
+  table.kv th::after { content: " :"; }
+  table.kv td.em { font-weight: 700; }
+  .longtext { margin: .5rem 0 .7rem; }
+  .longtext h4 { margin: 0 0 .2rem; font-size: .95em; color: var(--muted); }
+  .longtext h4::after { content: " :"; }
+  .longtext p { margin: 0 0 .25rem; }
+  .record { border-left: 3px solid var(--accent-soft);
+             padding-left: .7rem; margin: .5rem 0 .8rem; }
+  .rec-title { font-weight: 700; background: var(--accent-soft);
+                padding: .2rem .5rem; border-radius: 3px; display: inline-block;
+                margin-bottom: .3rem; }
+  .rec-sub { color: var(--muted); font-style: italic; font-size: .87em;
+              margin-bottom: .3rem; }
+  .obs { border: 1px solid var(--rule); border-radius: 4px; padding: .6rem .8rem;
+          margin: 0 0 .7rem; }
+  .obs-id { font-weight: 700; color: var(--accent); }
+  .obs-meta { color: var(--muted); font-size: .85em; font-style: italic;
+               margin-bottom: .35rem; }
+  .obs-body p { margin: 0 0 .25rem; }
+  .signature { margin-top: 2.2rem; text-align: right; }
+  .signature span { color: var(--muted); font-weight: 600; font-size: .88em; }
+  .sig-line { border-bottom: 1px solid var(--muted); width: 7cm; height: 2.2rem;
+               margin-left: auto; }
+  .signature em { font-size: .88em; color: var(--muted); }
+  .confidential { margin-top: 1.4rem; background: var(--accent-soft); color: var(--muted);
+                   font-style: italic; font-size: .84em; text-align: center;
+                   padding: .5rem .8rem; border-radius: 4px; }
+  .page-footer { text-align: center; color: var(--muted); font-size: .8em;
+                  margin-top: 1rem; }
+  .empty { text-align: center; color: var(--muted); font-style: italic;
+            padding: 2.5rem 0; }
+  @media print {
+    body { background: #fff; }
+    .sheet { box-shadow: none; margin: 0; max-width: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  
+  <h1>Rapport médical complet</h1>
+  <p class="subtitle">Service de Neurochirurgie — synthèse pré-opératoire</p>
+  <div class="banner"><div class="bi"><span>Patient</span><strong>BENALI Yacine</strong></div><div class="bi"><span>Identifiant</span><strong>CHU-2026-00412</strong></div><div class="bi"><span>Date de naissance</span><strong>12/04/1978</strong></div><div class="bi"><span>Âge</span><strong>48</strong></div><div class="bi"><span>Sexe</span><strong>M</strong></div><div class="bi"><span>Rédigé par</span><strong>Dr. Amina Kaci</strong></div><div class="bi"><span>Généré le</span><strong>17/08/2026 12:14</strong></div><div class="bi"><span>Référence</span><strong>RPT-2026-0142</strong></div></div>
+  <nav class="toc"><h2>Sommaire</h2><ol><li>Données démographiques</li><li>Motif d&#x27;hospitalisation</li><li>Antécédents médicaux</li><li>Diagnostic neurochirurgical<ul><li>Anatomopathologie</li></ul></li><li>Constantes</li></ol></nav>
+  <section class="sec lvl1"><h2>Données démographiques</h2><p class="sec-desc">Identité et coordonnées du patient, issues du dossier OpenMRS.</p><table class="kv"><tr><th scope="row">Profession</th><td>Enseignant</td></tr><tr><th scope="row">Commune / Ville</th><td>Blida</td></tr><tr><th scope="row">Téléphone</th><td>0555 12 34 56</td></tr></table></section><section class="sec lvl1"><h2>Motif d&#x27;hospitalisation</h2><div class="record"><div class="rec-title">02/08/2026</div><table class="kv"><tr><th scope="row">Délai diagnostique</th><td>94 j</td></tr><tr><th scope="row">Neurochirurgien responsable</th><td>Dr. Amina Kaci</td></tr></table><div class="longtext"><h4>Motif d&#x27;admission</h4><p>Céphalées progressives avec troubles visuels.</p></div></div></section><section class="sec lvl1"><h2>Antécédents médicaux</h2><table class="kv"><tr><th scope="row">Hypertension artérielle</th><td>Oui</td></tr><tr><th scope="row">Diabète</th><td>Non</td></tr><tr><th scope="row">Allergies</th><td class="em">Pénicilline</td></tr></table><div class="longtext"><h4>Traitement chronique</h4><p>Amlodipine 5 mg/j</p><p>Atorvastatine 20 mg/j</p></div></section><section class="sec lvl1"><h2>Diagnostic neurochirurgical</h2><p class="sec-desc">Diagnostic, siège lésionnel, latéralité et taille (Fiche §8).</p><table class="kv"><tr><th scope="row">Diagnostic</th><td class="em">Méningiome frontal</td></tr><tr><th scope="row">Siège de la lésion</th><td>Convexité frontale</td></tr><tr><th scope="row">Latéralité</th><td>Gauche</td></tr><tr><th scope="row">Taille</th><td>32 mm</td></tr><tr><th scope="row">Nombre de lésions</th><td>1</td></tr></table><section class="sec lvl2"><h3>Anatomopathologie</h3><table class="kv"><tr><th scope="row">Diagnostic final</th><td class="em">Méningiome méningothélial</td></tr><tr><th scope="row">Grade OMS</th><td>Grade I</td></tr></table></section></section><section class="sec lvl1"><h2>Constantes</h2><div class="record"><div class="rec-title">10/08/2026</div><div class="rec-sub">Consultation pré-opératoire</div><table class="kv"><tr><th scope="row">Tension artérielle</th><td>13/8</td></tr><tr><th scope="row">Fréquence cardiaque</th><td>72 bpm</td></tr><tr><th scope="row">SpO2</th><td>98 %</td></tr></table></div><div class="record"><div class="rec-title">14/08/2026</div><table class="kv"><tr><th scope="row">Tension artérielle</th><td>12/7</td></tr><tr><th scope="row">Fréquence cardiaque</th><td>68 bpm</td></tr></table></div></section>
+  <section class="sec lvl1"><h2>Observations sur imagerie</h2><div class="obs"><div class="obs-id">IRM cérébrale — 14/08/2026</div><div class="obs-meta">MR  ·  14/08/2026  ·  Dr. Amina Kaci  ·  14/08/2026 09:20</div><div class="obs-body"><p>Lésion extra-axiale frontale gauche, de 32 mm de grand axe, à base d&#x27;implantation durale large.</p><p>Prise de contraste homogène et intense. Pas d&#x27;engagement.</p></div></div><div class="obs"><div class="obs-id">TDM cérébrale — 02/08/2026</div><div class="obs-meta">CT  ·  02/08/2026  ·  Dr. Karim Belkacem  ·  02/08/2026 16:45</div><div class="obs-body"><p>Processus expansif frontal gauche avec oedème périlésionnel modéré.</p></div></div></section>
+  <div class="signature"><span>Signature et cachet</span><div class="sig-line"></div><em>Dr. Amina Kaci</em></div>
+  <div class="confidential">Document médical confidentiel — usage strictement réservé au personnel autorisé.</div>
+  <div class="page-footer">Document généré automatiquement par OpenMRS / medreport.</div>
+</div>
+</body>
+</html>
