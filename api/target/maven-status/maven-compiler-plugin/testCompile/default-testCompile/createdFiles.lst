@@ -1,0 +1,3 @@
+org\openmrs\module\medreport\api\ReportPrivilegeCoherenceTest.class
+org\openmrs\module\medreport\api\DataSourceManifestTest.class
+org\openmrs\module\medreport\api\ImageReportServiceRulesTest.class
