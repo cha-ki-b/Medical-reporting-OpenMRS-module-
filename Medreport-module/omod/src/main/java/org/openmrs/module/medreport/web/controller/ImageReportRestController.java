@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import javax.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -117,6 +118,95 @@ public class ImageReportRestController extends MedreportBaseController {
             headers.set(HttpHeaders.CACHE_CONTROL, "no-store, private");
             headers.set("X-Content-Type-Options", "nosniff");
             return new ResponseEntity<byte[]>(content, headers, HttpStatus.OK);
+        } finally {
+            end();
+        }
+    }
+
+    /**
+     * Cross-patient search: reports by a set of authors, about a set of images, or both.
+     *
+     * <p>Both parameters are comma-separated and both are optional, so the two filters
+     * compose - which is what makes "everything user2 wrote about studies 5 and 6" a single
+     * request rather than a client-side intersection.
+     */
+    @RequestMapping(value = "/module/medreport/reportSearch.form", method = RequestMethod.GET)
+    @ResponseBody
+    public Map<String, Object> search(HttpServletRequest request,
+                                      @RequestParam(value = "authorIds", required = false) String authorIds,
+                                      @RequestParam(value = "studyUids", required = false) String studyUids,
+                                      @RequestParam(value = "mine", required = false,
+                                              defaultValue = "false") boolean mine,
+                                      @RequestParam(value = "limit", required = false,
+                                              defaultValue = "200") Integer limit) {
+        begin(request);
+        try {
+            MedreportPrivileges.requireImagingView();
+
+            List<Integer> authors = parseIntList(authorIds);
+            if (mine) {
+                // "Mine" is resolved from the session, never from a parameter - so it cannot
+                // be pointed at another clinician by editing the URL.
+                User current = Context.getAuthenticatedUser();
+                authors = current != null && current.getUserId() != null
+                        ? Collections.singletonList(current.getUserId())
+                        : Collections.<Integer>emptyList();
+            }
+
+            List<ImageReport> reports = service().searchReports(
+                    authors, parseStringList(studyUids), limit != null ? limit : 200);
+
+            List<Map<String, Object>> payload = new ArrayList<Map<String, Object>>();
+            for (ImageReport report : reports) {
+                Map<String, Object> described = describe(report);
+                // Cross-patient results are meaningless without saying whose record it is.
+                described.put("patient", patientLabel(report));
+                payload.add(described);
+            }
+
+            Map<String, Object> response = ok();
+            response.put("reports", payload);
+            response.put("canViewHistory", service().canViewHistory());
+            return response;
+        } finally {
+            end();
+        }
+    }
+
+    /** The two filter lists, each containing only values that actually occur in reports. */
+    @RequestMapping(value = "/module/medreport/reportFilters.form", method = RequestMethod.GET)
+    @ResponseBody
+    public Map<String, Object> filters(HttpServletRequest request) {
+        begin(request);
+        try {
+            MedreportPrivileges.requireImagingView();
+
+            List<Map<String, Object>> authors = new ArrayList<Map<String, Object>>();
+            for (User author : service().getReportAuthors()) {
+                if (author == null || author.getUserId() == null) {
+                    continue;
+                }
+                Map<String, Object> entry = new LinkedHashMap<String, Object>();
+                entry.put("id", author.getUserId());
+                entry.put("label", displayName(author));
+                entry.put("username", author.getUsername());
+                authors.add(entry);
+            }
+
+            List<Map<String, Object>> images = new ArrayList<Map<String, Object>>();
+            for (ReportImageLink link : service().getReportedImages()) {
+                Map<String, Object> entry = new LinkedHashMap<String, Object>();
+                entry.put("studyUid", link.getOrthancStudyUid());
+                entry.put("label", link.getDisplayLabel());
+                images.add(entry);
+            }
+
+            User current = Context.getAuthenticatedUser();
+            Map<String, Object> response = ok();
+            response.put("authors", authors);
+            response.put("images", images);
+            response.put("currentUserId", current != null ? current.getUserId() : null);
+            return response;
         } finally {
             end();
         }
@@ -383,6 +473,53 @@ public class ImageReportRestController extends MedreportBaseController {
         }
         // Column widths are 255; truncate rather than let Hibernate fail the whole save.
         return raw.length() > 255 ? raw.substring(0, 255) : raw;
+    }
+
+    /** Comma-separated ids; anything non-numeric is dropped rather than failing the request. */
+    private List<Integer> parseIntList(String raw) {
+        List<Integer> values = new ArrayList<Integer>();
+        if (raw == null || raw.trim().isEmpty()) {
+            return values;
+        }
+        for (String part : raw.split(",")) {
+            try {
+                values.add(Integer.valueOf(part.trim()));
+            } catch (NumberFormatException ignored) {
+                // A malformed id narrows nothing; silently skipping it is safer than
+                // failing a search the clinician can still usefully run.
+            }
+        }
+        return values;
+    }
+
+    private List<String> parseStringList(String raw) {
+        List<String> values = new ArrayList<String>();
+        if (raw == null || raw.trim().isEmpty()) {
+            return values;
+        }
+        for (String part : raw.split(",")) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty() && trimmed.length() <= 255) {
+                values.add(trimmed);
+            }
+        }
+        return values;
+    }
+
+    /** Patient identity for a cross-patient result row. */
+    private Map<String, Object> patientLabel(ImageReport report) {
+        Map<String, Object> label = new LinkedHashMap<String, Object>();
+        Patient patient = report.getPatient();
+        if (patient == null) {
+            return label;
+        }
+        label.put("id", patient.getPatientId());
+        label.put("uuid", patient.getUuid());
+        label.put("familyName", patient.getFamilyName());
+        label.put("givenName", patient.getGivenName());
+        label.put("identifier", patient.getPatientIdentifier() != null
+                ? patient.getPatientIdentifier().getIdentifier() : null);
+        return label;
     }
 
     private static String displayName(User user) {

@@ -219,6 +219,9 @@ public class PatientReportServiceImpl extends BaseOpenmrsService implements Pati
         options.setConfidentialityNotice(request.isConfidentialityNotice());
         context.setOptions(options);
 
+        // Verbatim, untranslated, rendered last (see the renderer's layout modules).
+        context.setDoctorObservation(trimToNull(request.getDoctorObservation()));
+
         List<String> includedSections = new ArrayList<String>();
         List<String> refusedSections = new ArrayList<String>();
 
@@ -450,7 +453,12 @@ public class PatientReportServiceImpl extends BaseOpenmrsService implements Pati
                 preference.setPreferenceKey(MedreportConstants.PREFERENCE_REPORT_OPTIONS);
                 preference.setDateCreated(now);
             }
-            preference.setPreferenceValue(MAPPER.writeValueAsString(request));
+            // The observation is about ONE patient on ONE day. Persisting it would make it
+            // reappear, pre-filled, on the next patient's report - a clinical-safety problem
+            // dressed as a convenience. Stripped here, server-side, so no UI mistake can
+            // reintroduce it.
+            ReportRequest persisted = copyWithoutObservation(request);
+            preference.setPreferenceValue(MAPPER.writeValueAsString(persisted));
             preference.setDateChanged(now);
             dao.savePreference(preference);
         } catch (Exception e) {
@@ -458,6 +466,40 @@ public class PatientReportServiceImpl extends BaseOpenmrsService implements Pati
                     + user.getUsername() + ".", e);
         }
         return request;
+    }
+
+    /**
+     * A shallow copy with {@code doctorObservation} cleared, for persistence.
+     *
+     * <p>Copying rather than mutating the caller's object: {@code generate()} may still be
+     * holding the same instance, and blanking a field it is about to render would be a
+     * genuinely baffling bug.
+     */
+    private ReportRequest copyWithoutObservation(ReportRequest source) {
+        ReportRequest copy = new ReportRequest();
+        copy.setLanguage(source.getLanguage());
+        copy.setFormat(source.getFormat());
+        copy.setTemplate(source.getTemplate());
+        copy.setSections(new ArrayList<String>(source.getSections()));
+        copy.setFields(new LinkedHashMap<String, List<String>>(source.getFields()));
+        copy.setIncludeImageObservations(source.isIncludeImageObservations());
+        copy.setShowEmptyFields(source.isShowEmptyFields());
+        copy.setIncludeTableOfContents(source.isIncludeTableOfContents());
+        copy.setIncludeSignatureBlock(source.isIncludeSignatureBlock());
+        copy.setIncludePageNumbers(source.isIncludePageNumbers());
+        copy.setConfidentialityNotice(source.isConfidentialityNotice());
+        copy.setTitle(source.getTitle());
+        copy.setSubtitle(source.getSubtitle());
+        copy.setDoctorObservation(null);
+        return copy;
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private ReportRequest defaults() {

@@ -46,6 +46,15 @@ public class ReportRequest {
 
     private boolean confidentialityNotice = true;
 
+    /**
+     * The clinician's own observations for THIS report.
+     *
+     * <p>Never persisted as a preference: {@code PatientReportServiceImpl.savePreferences}
+     * strips it. A saved observation would silently reappear on the next patient's report,
+     * which is a clinical-safety problem, not a convenience.
+     */
+    private String doctorObservation;
+
     private String title;
 
     private String subtitle;
@@ -136,6 +145,14 @@ public class ReportRequest {
 
     public void setConfidentialityNotice(boolean confidentialityNotice) {
         this.confidentialityNotice = confidentialityNotice;
+    }
+
+    public String getDoctorObservation() {
+        return doctorObservation;
+    }
+
+    public void setDoctorObservation(String doctorObservation) {
+        this.doctorObservation = doctorObservation;
     }
 
     public String getTitle() {

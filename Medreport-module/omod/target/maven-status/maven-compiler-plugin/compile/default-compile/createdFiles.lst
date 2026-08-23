@@ -1,7 +1,9 @@
 org\openmrs\module\medreport\web\controller\ImageReportRestController.class
 org\openmrs\module\medreport\web\controller\PatientReportRestController.class
+org\openmrs\module\medreport\page\controller\ImagingReportsPageController.class
 org\openmrs\module\medreport\fragment\controller\ImageReportsFragmentController.class
 org\openmrs\module\medreport\web\controller\MedreportBaseController.class
+org\openmrs\module\medreport\page\controller\MyReportsPageController.class
 org\openmrs\module\medreport\web\controller\MedreportExceptionHandler.class
 org\openmrs\module\medreport\page\controller\PatientReportPageController.class
 org\openmrs\module\medreport\page\controller\SettingsPageController.class

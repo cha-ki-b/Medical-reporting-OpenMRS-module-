@@ -7,6 +7,18 @@ black window, and press Enter. Every command below is safe to run more than once
 
 **Time needed:** about 30 minutes the first time.
 
+### Which versions this guide installs
+
+| Piece | Version | File you upload |
+| --- | --- | --- |
+| medreport | **1.1.0** | `medreport1.1.0.omod` |
+| imaging | **1.1.2-SNAPSHOT** | `imaging-1.1.2-SNAPSHOT.omod` |
+| patientview | **1.2.2** | `patientview1.2.2.omod` |
+| report-generation-service | **2.1.0** | runs in Docker, no file to upload |
+
+**Already running older versions?** Skip to *Upgrading from an earlier version* at the end —
+there is no database migration, but the filenames changed, so there is one thing you must do.
+
 ---
 
 ## What you are installing
@@ -17,6 +29,12 @@ Two separate things that talk to each other:
 | --- | --- | --- |
 | **medreport** | A plug-in for OpenMRS. Adds the report buttons and screens. | Into OpenMRS |
 | **report-generation-service** | A small helper program that turns data into a nice Word/PDF document. | Its own container next to OpenMRS |
+
+**New in this release (1.1.0):** the report window now has a **Observations du médecin** box
+whose text goes at the end of the document; switching language actually works and no longer
+resets your tick boxes; imaging reports have their **own page**, reached from a banner above
+the studies list; and there is a new **home-page search** to find reports by doctor and by
+image across all patients.
 
 Think of it like a printer: **medreport** decides *what* to print and *who is allowed* to
 print it. The **report-generation-service** is the printer that makes the actual page.
@@ -192,9 +210,9 @@ You need three `.omod` files. They are here after building (see the end of this 
 need to build them):
 
 ```
-Medreport-module/omod/target/medreport1.0.0.omod
-neuro-patientview/omod/target/patientview1.2.1.omod
-custom-imaging-openmrs/omod/target/imaging-1.1.1-SNAPSHOT.omod
+Medreport-module/omod/target/medreport1.1.0.omod
+neuro-patientview/omod/target/patientview1.2.2.omod
+custom-imaging-openmrs/omod/target/imaging-1.1.2-SNAPSHOT.omod
 ```
 
 Install them through the OpenMRS web page — that is the easy and safe way:
@@ -202,8 +220,8 @@ Install them through the OpenMRS web page — that is the easy and safe way:
 1. Open OpenMRS in your browser and log in as **admin**.
 2. Go to **System Administration → Manage Modules**.
 3. Click **Add or Upgrade Module**.
-4. Choose `medreport1.0.0.omod`, then click **Upload**.
-5. Do the same for `patientview1.2.1.omod` and `imaging-1.1.1-SNAPSHOT.omod`.
+4. Choose `medreport1.1.0.omod`, then click **Upload**.
+5. Do the same for `patientview1.2.2.omod` and `imaging-1.1.2-SNAPSHOT.omod`.
 6. Wait until all three show a green **Started** mark.
 
 > **Important — order matters a little.** If medreport starts *before* patientview, it will not
@@ -284,17 +302,44 @@ Two rules the system enforces on its own, so you do not have to worry about them
 
 > **If the left side is empty and no button reacts**, see *Problem 3*.
 
+### Test A2 — the language switch and the doctor's observation
+
+Still in the personalisation window:
+
+1. Click **English**, then **Arabic**. The section names on the left should change language,
+   and **your ticked boxes must stay ticked**. (Both of those were broken before 1.1.0.)
+2. Scroll the right-hand column to **Observations du médecin** and type a sentence.
+3. Generate. Your sentence appears at the **very end** of the document, exactly as you typed
+   it — it is never translated.
+4. Generate a second report. The observation box is **empty again**, on purpose: a note about
+   one patient must not reappear on the next.
+
+> **Values stay in French.** Language changes the *labels* ("Diagnosis", "التشخيص"), not the
+> data a clinician typed. If the labels themselves stay French, you are running the old
+> `patientview` — upload 1.2.2.
+
 ### Test B — an imaging report
 
 1. Open a patient, go to the **Imagerie** tab.
-2. Below the list of studies you will see **Comptes rendus d'imagerie**.
-3. Click **Nouveau compte rendu**.
+2. **At the top, above the list of studies**, you will see a banner
+   **Comptes rendus d'imagerie**. Click it.
+3. On the page that opens, click **Nouveau compte rendu**.
 4. Tick one **or several** studies, write your observations, click **Enregistrer**.
 5. The report appears in the list, showing your name and the date.
 6. Use the **Comptes rendus sur** dropdown to see all reports about one particular image.
 7. Tick **Uniquement mes comptes rendus** to see only your own.
 8. On your own reports you get **Modifier** and **Supprimer**. On a colleague's report those
    buttons are greyed out — hover over one and it tells you why.
+
+### Test C — finding reports across all patients
+
+1. Go to the OpenMRS **home page**.
+2. Click **Comptes rendus d'imagerie**.
+3. You get two lists side by side: **Rédigés par** (the doctors) and **Portant sur l'image**
+   (the studies). Tick one or several in each.
+4. Click **Rechercher**. You get every report matching **both** filters at once — for example
+   everything Dr X wrote about two particular scans.
+5. **Effacer les filtres** brings back everything.
 
 ---
 
@@ -433,6 +478,65 @@ to HTML automatically.
 Nothing is ever really deleted. An administrator (`App: medreport.admin`) opens the patient's
 Imagerie tab, finds the report — administrators still see removed ones, marked **Supprimé** —
 and clicks **Restaurer**.
+
+---
+
+# Upgrading from an earlier version
+
+Read this if medreport is already installed and running.
+
+**The good news:** there is **no database migration** in 1.1.0. No new tables, no new columns,
+no Liquibase changeset. Your existing reports, versions and audit history are untouched.
+
+**The one thing you must do:** the `.omod` filenames changed with the version numbers, and
+OpenMRS keys modules by filename. If you just upload the new files you can end up with **two
+copies of the same module** and very confusing behaviour.
+
+So, for each of the three modules:
+
+1. **System Administration → Manage Modules**
+2. Find the module, click **Stop**, then **Delete** (this removes the old `.omod` file only —
+   it does **not** touch your data, which lives in the MySQL database)
+3. Upload the new file
+
+Do them in this order, then reload:
+
+| Order | Upload | Replaces |
+| --- | --- | --- |
+| 1 | `medreport1.1.0.omod` | `medreport1.0.0.omod` |
+| 2 | `imaging-1.1.2-SNAPSHOT.omod` | `imaging-1.1.1-SNAPSHOT.omod` |
+| 3 | `patientview1.2.2.omod` | `patientview1.2.1.omod` |
+
+4. Rebuild the renderer so it is on 2.1.0:
+
+```bash
+cd /home/server/report-generation-service
+docker compose up --build -d
+```
+
+5. Confirm the version:
+
+```bash
+docker exec openmrs-app curl -fsS http://medreport-rgs:8300/health
+```
+
+You want `"version":"2.1.0"`.
+
+6. Open `/openmrs/medreport/settings.page?refresh=true` so medreport rescans data sources.
+7. **Press `Ctrl+Shift+R`** on any medreport page. The browser caches JavaScript, and the
+   language fix is in a `.js` file — without a hard reload you will still be running the old
+   one and it will look like nothing changed.
+
+### Mixed versions
+
+Nothing breaks, but features go missing quietly:
+
+| Situation | Effect |
+| --- | --- |
+| medreport 1.1.0 + renderer 2.0.0 | Doctor's observation is silently dropped from the document |
+| medreport 1.1.0 + patientview 1.2.1 | Clinical labels stay French in English/Arabic reports |
+| medreport 1.1.0 + imaging 1.1.1 | No banner above the studies table; use the patient dashboard link instead |
+| medreport 1.0.0 + renderer 2.1.0 | Fine — the new field is optional |
 
 ---
 

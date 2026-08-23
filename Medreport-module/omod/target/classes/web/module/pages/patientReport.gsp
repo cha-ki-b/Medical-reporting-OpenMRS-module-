@@ -117,6 +117,22 @@
             </div>
 
             <div class="mr-panel">
+                <h2>${ ui.message("medreport.wizard.observation") }</h2>
+                <div class="mr-panel-body">
+                    <% /*
+                      The clinician's own words, appended verbatim at the very end of the
+                      document and never translated. Deliberately not saved as a preference:
+                      an observation belongs to one patient on one day, and having it reappear
+                      pre-filled on the next report would be a clinical-safety problem. The
+                      server strips it from the saved preferences as well.
+                    */ %>
+                    <p class="mr-meta">${ ui.message("medreport.wizard.observationHint") }</p>
+                    <textarea id="mr-observation" class="mr-textarea mr-textarea-short"
+                              maxlength="8000"></textarea>
+                </div>
+            </div>
+
+            <div class="mr-panel">
                 <h2>${ ui.message("medreport.wizard.options") }</h2>
                 <div class="mr-panel-body">
                     <label class="mr-check">

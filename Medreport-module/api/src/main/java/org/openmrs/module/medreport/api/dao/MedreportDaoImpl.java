@@ -6,6 +6,7 @@ import org.openmrs.User;
 import org.openmrs.module.medreport.api.model.ImageReport;
 import org.openmrs.module.medreport.api.model.ImageReportVersion;
 import org.openmrs.module.medreport.api.model.MedreportOperationLog;
+import org.openmrs.module.medreport.api.model.ReportImageLink;
 import org.openmrs.module.medreport.api.model.UserReportPreference;
 
 import java.util.List;
@@ -85,6 +86,70 @@ public class MedreportDaoImpl implements MedreportDao {
                 .createQuery(hql, ImageReport.class)
                 .setParameter("patient", patient)
                 .list();
+    }
+
+    /**
+     * The filters are appended only when non-empty, so an unconstrained axis costs nothing in
+     * the generated SQL. Values are always bound as parameters - never concatenated - so a
+     * study UID coming from a query string cannot alter the statement.
+     */
+    public List<ImageReport> searchReports(List<Integer> authorIds, List<String> studyUids,
+                                           boolean includeVoided, int limit) {
+        boolean byAuthor = authorIds != null && !authorIds.isEmpty();
+        boolean byImage = studyUids != null && !studyUids.isEmpty();
+
+        StringBuilder hql = new StringBuilder("select distinct r from ImageReport r where 1 = 1 ");
+        if (!includeVoided) {
+            hql.append("and r.voided = false ");
+        }
+        if (byAuthor) {
+            hql.append("and r.author.userId in (:authorIds) ");
+        }
+        if (byImage) {
+            // Correlated on the CURRENT version: a study dropped by a later edit should stop
+            // matching, exactly as it already does for the per-study listing.
+            hql.append("and exists (select 1 from ReportImageLink l ")
+               .append("where l.report = r and l.version.current = true ")
+               .append("and l.orthancStudyUid in (:studyUids)) ");
+        }
+        hql.append("order by r.dateCreated desc");
+
+        org.hibernate.query.Query<ImageReport> query = sessionFactory.getCurrentSession()
+                .createQuery(hql.toString(), ImageReport.class);
+        if (byAuthor) {
+            query.setParameterList("authorIds", authorIds);
+        }
+        if (byImage) {
+            query.setParameterList("studyUids", studyUids);
+        }
+        query.setMaxResults(limit > 0 ? limit : 200);
+        return query.list();
+    }
+
+    public List<User> getDistinctAuthors(boolean includeVoided) {
+        String hql = "select distinct r.author from ImageReport r "
+                + (includeVoided ? "" : "where r.voided = false ")
+                + "order by r.author.username asc";
+        return sessionFactory.getCurrentSession().createQuery(hql, User.class).list();
+    }
+
+    public List<ReportImageLink> getDistinctReportedImages(boolean includeVoided) {
+        // One row per distinct study UID. Grouping in HQL and re-reading the entity would need
+        // a second round trip, so the de-duplication happens here on an already-small list.
+        String hql = "from ReportImageLink l where l.version.current = true "
+                + (includeVoided ? "" : "and l.report.voided = false ")
+                + "order by l.report.dateCreated desc";
+        List<ReportImageLink> all = sessionFactory.getCurrentSession()
+                .createQuery(hql, ReportImageLink.class).list();
+
+        java.util.Set<String> seen = new java.util.HashSet<String>();
+        List<ReportImageLink> distinct = new java.util.ArrayList<ReportImageLink>();
+        for (ReportImageLink link : all) {
+            if (seen.add(link.getOrthancStudyUid())) {
+                distinct.add(link);
+            }
+        }
+        return distinct;
     }
 
     // -- versions --------------------------------------------------------

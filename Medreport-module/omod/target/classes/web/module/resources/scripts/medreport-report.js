@@ -352,6 +352,9 @@ var medreport = (function () {
         $('mr-opt-confidential').checked = prefs.confidentialityNotice !== false;
         $('mr-opt-images').checked = prefs.includeImageObservations !== false;
         if (prefs.title) { $('mr-title').value = prefs.title; }
+        // Deliberately NOT restored from preferences - an observation belongs to one report
+        // about one patient. The server strips it before saving too; this is the UI half.
+        if ($('mr-observation')) { $('mr-observation').value = ''; }
 
         // Apply the stored selection. A set that no longer exists, or that the user has
         // since lost access to, simply has no checkbox and is skipped - a stale preference
@@ -390,6 +393,7 @@ var medreport = (function () {
             includeSignatureBlock: $('mr-opt-signature').checked,
             includePageNumbers: $('mr-opt-pages').checked,
             confidentialityNotice: $('mr-opt-confidential').checked,
+            doctorObservation: $('mr-observation') ? ($('mr-observation').value || null) : null,
             title: $('mr-title').value || null
         };
     }
@@ -518,7 +522,13 @@ var medreport = (function () {
         ctx.patientId = options.patientId;
         ctx.messages = options.messages || {};
 
-        initSegment('mr-language', function () { reloadCatalog(); });
+        // Carry the live selection across the reload; do NOT re-read stored preferences,
+        // which would undo the language the user just picked (see loadCatalog).
+        initSegment('mr-language', function () {
+            var carried = collectSelection();
+            updateTitlePlaceholder();
+            loadCatalog(false, carried);
+        });
         initSegment('mr-format');
 
         $('mr-generate').addEventListener('click', generate);
@@ -546,7 +556,22 @@ var medreport = (function () {
         $('mr-filter').addEventListener('input', function () { applyFilter(this.value); });
 
         loadTemplates();
-        reloadCatalog();
+        updateTitlePlaceholder();
+        loadCatalog(true);
+    }
+
+    /**
+     * Show the language's default report title as a placeholder.
+     *
+     * The field is left empty on purpose: an empty title means "use the default for the
+     * chosen language", so switching language changes the heading. A title the user actually
+     * typed is theirs and is used verbatim, in whatever language they wrote it.
+     */
+    function updateTitlePlaceholder() {
+        var field = $('mr-title');
+        if (!field) { return; }
+        var defaults = { fr: 'Rapport médical', en: 'Medical report', ar: 'التقرير الطبي' };
+        field.placeholder = defaults[readSegment('mr-language') || 'fr'] || defaults.fr;
     }
 
     function toggleAll(open) {
@@ -559,22 +584,68 @@ var medreport = (function () {
         });
     }
 
-    function reloadCatalog() {
+    /**
+     * Load (or reload) the catalogue.
+     *
+     * `applyStoredPrefs` is the whole point of this signature. The catalogue has to be
+     * re-fetched when the language changes, because its labels are server-translated - but
+     * the saved preferences must NOT be re-applied at that moment. Doing both in one function
+     * was a real bug: applyPreferences() calls setSegment('mr-language', prefs.language),
+     * so picking English re-fetched the tree in English and then immediately snapped the
+     * language button back to the saved value and reset every checkbox. The report then
+     * generated in the old language, because buildRequest() reads the button.
+     *
+     * So: apply stored preferences exactly once, on first load. On a language switch, carry
+     * the user's live selection across instead - section and field ids are language-
+     * independent, so it transfers cleanly.
+     */
+    function loadCatalog(applyStoredPrefs, carriedSelection) {
         var language = readSegment('mr-language') || 'fr';
-        get(ctx.base + '/catalog.form?language=' + encodeURIComponent(language))
+        return get(ctx.base + '/catalog.form?language=' + encodeURIComponent(language))
             .then(function (body) {
                 ctx.catalog = body.catalog || [];
                 indexCatalog();
                 renderCatalog();
-                return get(ctx.base + '/reportPreferences.form');
-            })
-            .then(function (body) {
-                ctx.prefs = body.preferences || {};
-                applyPreferences(ctx.prefs);
+
+                if (applyStoredPrefs) {
+                    return get(ctx.base + '/reportPreferences.form').then(function (prefsBody) {
+                        ctx.prefs = prefsBody.preferences || {};
+                        applyPreferences(ctx.prefs);
+                    });
+                }
+                restoreSelection(carriedSelection);
+                return null;
             })
             .catch(function (error) {
                 notify('error', error.message);
             });
+    }
+
+    /** Re-tick what the user had ticked before the catalogue was re-rendered. */
+    function restoreSelection(selection) {
+        if (!selection) {
+            refreshSummary();
+            return;
+        }
+        Object.keys(nodes).forEach(function (sectionId) {
+            var box = sectionCheckbox(sectionId);
+            if (!box) { return; }
+
+            if (selection.sections.indexOf(sectionId) === -1) {
+                setSection(sectionId, false);
+                return;
+            }
+            var explicit = selection.fields[sectionId];
+            if (explicit) {
+                fieldCheckboxes(sectionId).forEach(function (field) {
+                    field.checked = explicit.indexOf(field.dataset.mrField) !== -1;
+                });
+                refreshSectionState(sectionId);
+            } else {
+                setSection(sectionId, true);
+            }
+        });
+        refreshSummary();
     }
 
     function loadTemplates() {

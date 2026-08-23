@@ -615,5 +615,21 @@ var medreportImaging = (function () {
         $('mr-report-text').focus();
     }
 
-    return { init: init, reload: reload, openForSeries: openForSeries };
+    /**
+     * Open the editor scoped to whatever study/series the page was opened with.
+     *
+     * Used by the standalone imaging-reports page when it is reached with `?new=1` from a
+     * per-series action, so "write a report about this sequence" stays one click.
+     */
+    function openScoped() {
+        if (!cfg.canManage) { return; }
+        openEditor(null, null);
+    }
+
+    return {
+        init: init,
+        reload: reload,
+        openForSeries: openForSeries,
+        openScoped: openScoped
+    };
 }());

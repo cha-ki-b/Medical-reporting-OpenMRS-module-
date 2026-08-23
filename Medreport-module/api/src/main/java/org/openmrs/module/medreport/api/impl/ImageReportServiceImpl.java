@@ -182,6 +182,25 @@ public class ImageReportServiceImpl extends BaseOpenmrsService implements ImageR
         return data instanceof byte[] ? (byte[]) data : null;
     }
 
+    public List<ImageReport> searchReports(List<Integer> authorIds, List<String> studyUids,
+                                           int limit) {
+        MedreportPrivileges.requireImagingView();
+        // Soft-deleted reports stay out of search for everyone but an administrator, exactly
+        // as they do everywhere else (RP5).
+        return dao.searchReports(authorIds, studyUids,
+                MedreportPrivileges.isReportAdmin(), limit);
+    }
+
+    public List<User> getReportAuthors() {
+        MedreportPrivileges.requireImagingView();
+        return dao.getDistinctAuthors(MedreportPrivileges.isReportAdmin());
+    }
+
+    public List<ReportImageLink> getReportedImages() {
+        MedreportPrivileges.requireImagingView();
+        return dao.getDistinctReportedImages(MedreportPrivileges.isReportAdmin());
+    }
+
     // ==================================================================
     // Update (RP3, RP8)
     // ==================================================================
