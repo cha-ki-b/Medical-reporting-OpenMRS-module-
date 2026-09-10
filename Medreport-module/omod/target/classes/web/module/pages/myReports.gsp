@@ -15,61 +15,93 @@
 
 <div class="mr-wrap">
 
-    <div class="mr-header">
+    <div class="mr-page-head">
         <div>
             <h1>${ ui.message("medreport.search.title") }</h1>
             <p class="mr-sub">${ ui.message("medreport.search.subtitle") }</p>
+        </div>
+        <div class="mr-page-head-actions">
+            <span class="mr-kpi"><strong id="mr-kpi-count">0</strong>
+                <span id="mr-kpi-label">${ ui.message("medreport.search.results") }</span></span>
         </div>
     </div>
 
     <div id="mr-search-notice" class="mr-note" hidden></div>
 
-    <div class="mr-panel">
-        <h2>${ ui.message("medreport.search.filters") }</h2>
-        <div class="mr-panel-body">
+    <% /*
+      Two columns, not one stacked list. Putting the filters in their own column is what
+      actually separates "the controls" from "the results" - tinting a panel does not, as the
+      first version of this page demonstrated.
+    */ %>
+    <div class="mr-search-layout">
 
-            <div class="mr-filter-grid">
-                <div class="mr-field">
-                    <label>
-                        ${ ui.message("medreport.search.byAuthor") }
-                        <span class="mr-count" id="mr-author-count"></span>
-                    </label>
+        <aside class="mr-filters">
+            <div class="mr-card">
+                <div class="mr-card-head">
+                    <h2>${ ui.message("medreport.search.filters") }</h2>
+                    <button type="button" class="mr-link-btn" id="mr-clear">
+                        ${ ui.message("medreport.search.clear") }
+                    </button>
+                </div>
+                <div class="mr-card-body">
+
                     <% /*
-                      A checkbox list, not a single select: the requirement is a SET of users
-                      intersected with a SET of images. Only authors who have actually written
-                      a report appear, so the list stays short and meaningful.
+                      Type-ahead token fields, not checkbox lists. A checkbox per author and
+                      per study collapses at real scale - a PACS has thousands of studies.
+                      Here the widget's size is bounded by what the user has selected, and
+                      the options are queried from the server as they type.
                     */ %>
-                    <div id="mr-author-list" class="mr-picker"></div>
-                </div>
+                    <div class="mr-field">
+                        <label class="mr-label" for="mr-author-input">
+                            ${ ui.message("medreport.search.byAuthor") }
+                        </label>
+                        <div class="mr-tokenfield" id="mr-author-field">
+                            <input id="mr-author-input" class="mr-token-input" autocomplete="off"
+                                   role="combobox" aria-expanded="false" aria-autocomplete="list"
+                                   aria-controls="mr-author-suggest"
+                                   placeholder="${ ui.message('medreport.search.authorPlaceholder') }"/>
+                        </div>
+                        <div class="mr-suggest" id="mr-author-suggest" role="listbox" hidden></div>
+                    </div>
 
-                <div class="mr-field">
-                    <label>
-                        ${ ui.message("medreport.search.byImage") }
-                        <span class="mr-count" id="mr-image-count"></span>
+                    <div class="mr-field">
+                        <label class="mr-label" for="mr-image-input">
+                            ${ ui.message("medreport.search.byImage") }
+                        </label>
+                        <div class="mr-tokenfield" id="mr-image-field">
+                            <input id="mr-image-input" class="mr-token-input" autocomplete="off"
+                                   role="combobox" aria-expanded="false" aria-autocomplete="list"
+                                   aria-controls="mr-image-suggest"
+                                   placeholder="${ ui.message('medreport.search.imagePlaceholder') }"/>
+                        </div>
+                        <div class="mr-suggest" id="mr-image-suggest" role="listbox" hidden></div>
+                    </div>
+
+                    <hr class="mr-sep"/>
+
+                    <label class="mr-switch">
+                        <input type="checkbox" id="mr-mine-only"/>
+                        <span class="mr-switch-track"></span>
+                        <span class="mr-switch-label">${ ui.message("medreport.search.mineOnly") }</span>
                     </label>
-                    <div id="mr-image-list" class="mr-picker"></div>
+
+                    <button type="button" id="mr-search" class="mr-btn mr-btn-primary mr-btn-block"
+                            style="margin-top:1rem">
+                        ${ ui.message("medreport.search.run") }
+                    </button>
                 </div>
             </div>
+        </aside>
 
-            <div class="mr-toolbar" style="margin-top:.6rem">
-                <label class="mr-check mr-check-inline">
-                    <input type="checkbox" id="mr-mine-only"/>
-                    <span>${ ui.message("medreport.search.mineOnly") }</span>
-                </label>
-                <button type="button" id="mr-search" class="mr-btn mr-btn-primary">
-                    ${ ui.message("medreport.search.run") }
-                </button>
-                <button type="button" id="mr-clear" class="mr-btn mr-btn-small">
-                    ${ ui.message("medreport.search.clear") }
-                </button>
-                <span class="mr-meta" id="mr-result-count"></span>
+        <section class="mr-results">
+            <div class="mr-results-head">
+                <h2 id="mr-results-title">${ ui.message("medreport.search.results") }</h2>
+                <span class="mr-meta">${ ui.message("medreport.search.sortedBy") }</span>
             </div>
+            <div id="mr-results"></div>
+        </section>
 
-        </div>
     </div>
-
-    <div id="mr-results"></div>
-
 </div>
 
 <script type="text/javascript">
@@ -83,17 +115,20 @@
                 none: '${ ui.escapeJs(ui.message("medreport.search.none")) }',
                 author: '${ ui.escapeJs(ui.message("medreport.imaging.author")) }',
                 version: '${ ui.escapeJs(ui.message("medreport.imaging.version")) }',
+                date: '${ ui.escapeJs(ui.message("medreport.imaging.date")) }',
                 patient: '${ ui.escapeJs(ui.message("medreport.search.patient")) }',
                 edit: '${ ui.escapeJs(ui.message("medreport.imaging.edit")) }',
-                remove: '${ ui.escapeJs(ui.message("medreport.imaging.remove")) }',
                 open: '${ ui.escapeJs(ui.message("medreport.search.open")) }',
                 download: '${ ui.escapeJs(ui.message("medreport.download")) }',
                 removed: '${ ui.escapeJs(ui.message("medreport.imaging.removed")) }',
                 own: '${ ui.escapeJs(ui.message("medreport.imaging.own")) }',
                 notOwner: '${ ui.escapeJs(ui.message("medreport.imaging.notOwner")) }',
                 results: '${ ui.escapeJs(ui.message("medreport.search.results")) }',
-                selected: '${ ui.escapeJs(ui.message("medreport.imaging.selectedCount")) }',
-                searching: '${ ui.escapeJs(ui.message("medreport.search.searching")) }'
+                searching: '${ ui.escapeJs(ui.message("medreport.search.searching")) }',
+                untitled: '${ ui.escapeJs(ui.message("medreport.search.untitled")) }',
+                noMatch: '${ ui.escapeJs(ui.message("medreport.search.noMatch")) }',
+                more: '${ ui.escapeJs(ui.message("medreport.search.more")) }',
+                remove: '${ ui.escapeJs(ui.message("medreport.search.removeToken")) }'
             }
         });
     });

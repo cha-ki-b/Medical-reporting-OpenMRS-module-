@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: org.openmrs.module.medreport.ModuleWiringTest
 -------------------------------------------------------------------------------
-Tests run: 23, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.250 s -- in org.openmrs.module.medreport.ModuleWiringTest
+Tests run: 23, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.254 s -- in org.openmrs.module.medreport.ModuleWiringTest

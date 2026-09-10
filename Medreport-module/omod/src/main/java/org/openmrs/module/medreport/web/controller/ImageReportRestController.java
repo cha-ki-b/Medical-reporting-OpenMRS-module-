@@ -173,6 +173,62 @@ public class ImageReportRestController extends MedreportBaseController {
         }
     }
 
+    /**
+     * Type-ahead for the filter widgets.
+     *
+     * <p>Replaces the previous "send every author and every image" response. That shape was
+     * fine for a demo and unusable in production: a PACS holds thousands of studies, and the
+     * client cannot render a checkbox per study. The filters now query as the user types, so
+     * the payload is bounded by {@code limit} rather than by the catalogue.
+     *
+     * @param kind    {@code authors} or {@code images}; omitted returns both (first page)
+     * @param q       free-text query; blank returns the most recent entries
+     */
+    @RequestMapping(value = "/module/medreport/filterSearch.form", method = RequestMethod.GET)
+    @ResponseBody
+    public Map<String, Object> filterSearch(HttpServletRequest request,
+                                            @RequestParam(value = "kind", required = false) String kind,
+                                            @RequestParam(value = "q", required = false) String q,
+                                            @RequestParam(value = "limit", required = false,
+                                                    defaultValue = "15") Integer limit) {
+        begin(request);
+        try {
+            MedreportPrivileges.requireImagingView();
+            int capped = limit == null || limit < 1 || limit > 50 ? 15 : limit;
+
+            Map<String, Object> response = ok();
+            if (kind == null || "authors".equals(kind)) {
+                List<Map<String, Object>> authors = new ArrayList<Map<String, Object>>();
+                for (User author : service().searchReportAuthors(q, capped)) {
+                    if (author == null || author.getUserId() == null) {
+                        continue;
+                    }
+                    Map<String, Object> entry = new LinkedHashMap<String, Object>();
+                    entry.put("id", author.getUserId());
+                    entry.put("label", displayName(author));
+                    entry.put("username", author.getUsername());
+                    authors.add(entry);
+                }
+                response.put("authors", authors);
+            }
+            if (kind == null || "images".equals(kind)) {
+                List<Map<String, Object>> images = new ArrayList<Map<String, Object>>();
+                for (ReportImageLink link : service().searchReportedImages(q, capped)) {
+                    Map<String, Object> entry = new LinkedHashMap<String, Object>();
+                    entry.put("studyUid", link.getOrthancStudyUid());
+                    entry.put("label", link.getDisplayLabel());
+                    images.add(entry);
+                }
+                response.put("images", images);
+            }
+            User current = Context.getAuthenticatedUser();
+            response.put("currentUserId", current != null ? current.getUserId() : null);
+            return response;
+        } finally {
+            end();
+        }
+    }
+
     /** The two filter lists, each containing only values that actually occur in reports. */
     @RequestMapping(value = "/module/medreport/reportFilters.form", method = RequestMethod.GET)
     @ResponseBody

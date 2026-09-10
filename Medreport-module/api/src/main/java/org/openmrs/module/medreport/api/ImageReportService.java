@@ -101,6 +101,20 @@ public interface ImageReportService extends OpenmrsService {
     @Authorized({ MedreportPrivileges.VIEW_MEDICAL_REPORTS })
     List<ReportImageLink> getReportedImages();
 
+    /**
+     * Type-ahead over the image filter. A checkbox per study does not survive contact with a
+     * real PACS, so the filter queries instead of enumerating.
+     *
+     * @param query free text matched against modality, description, date and UID; blank
+     *              returns the most recent images
+     */
+    @Authorized({ MedreportPrivileges.VIEW_MEDICAL_REPORTS })
+    List<ReportImageLink> searchReportedImages(String query, int limit);
+
+    /** Type-ahead over the author filter, matched against display name and username. */
+    @Authorized({ MedreportPrivileges.VIEW_MEDICAL_REPORTS })
+    List<User> searchReportAuthors(String query, int limit);
+
     // -- update / remove --------------------------------------------------
 
     /**

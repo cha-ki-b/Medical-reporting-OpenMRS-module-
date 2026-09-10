@@ -13,7 +13,7 @@ Two capabilities, one module:
    downloads it.
 
 **Target platform:** OpenMRS Platform 2.5.9 / Reference Application 2.12.2
-**Module ID:** `medreport` · **Package:** `org.openmrs.module.medreport` · **Version:** `1.1.0`
+**Module ID:** `medreport` · **Package:** `org.openmrs.module.medreport` · **Version:** `1.2.0`
 
 ---
 
@@ -464,7 +464,40 @@ cd report-generation-service && docker compose up --build -d && curl -fsS localh
 
 Versions follow semver: a **minor** bump for new capability, a **patch** bump for fixes only.
 
-### 1.1.0 — current
+### 1.2.0 — current
+
+A UI release. No schema change, no privilege change, no Liquibase migration.
+
+**Readability.** The report list was genuinely hard to read: title and status badge ran
+together as one word, the metadata and the clinical text were the same size and colour, and
+the action buttons had no spacing so "Télécharger" and "Ouvrir le dossier" rendered as a
+single run of text. A report card is now three visually distinct tiers — **title**, a
+labelled **metadata strip** on its own tinted band, and the **clinical text** in a bordered
+panel — with `gap`-spaced actions below a rule.
+
+**Filters vs results.** On the search page the two were stacked in one column and read as one
+wall of text. They are now two columns: filters in a bounded card in a sticky left rail,
+results in their own region with a count header. Structural separation, not tinting — tinting
+is what failed the first time.
+
+**Scalable filters.** The author and image filters were checkbox lists that enumerated the
+whole catalogue. That is fine for a demo and unusable against a real PACS with thousands of
+studies. Both are now **type-ahead token fields**: chips for what you have selected, and a
+server query as you type (`GET /module/medreport/filterSearch.form?kind=&q=&limit=`). The
+widget's size is bounded by the selection, not by the catalogue. Keyboard support: arrows to
+move, Enter to pick, Escape to close, Backspace on an empty input removes the last chip.
+
+**Surviving the host stylesheet.** The Reference Application styles headings through
+`#content h1/h2/h3`, and an ID selector beats any number of classes — which is why the
+deployed page showed a black heading and no header band however the classes were written.
+Two changes: the visual weight (backgrounds, borders, spacing) now lives on **container**
+elements where nothing competes, and the handful of typography properties worth defending
+carry `!important` with an inline explanation. `medreport.css` was rewritten around this.
+
+**Also:** proper switch controls instead of bare checkboxes, monospace patient/study
+identifiers, and a `mr-kpi` result count in the page header.
+
+### 1.1.0
 
 Adds three capabilities and fixes two defects found in hospital testing. Requires
 `patientview` **1.2.2** to show Arabic/English clinical labels, and `imaging`

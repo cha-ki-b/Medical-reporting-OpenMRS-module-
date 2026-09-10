@@ -152,6 +152,43 @@ public class MedreportDaoImpl implements MedreportDao {
         return distinct;
     }
 
+    public List<ReportImageLink> searchReportedImages(String query, boolean includeVoided,
+                                                     int limit) {
+        StringBuilder hql = new StringBuilder("from ReportImageLink l where l.version.current = true ");
+        if (!includeVoided) {
+            hql.append("and l.report.voided = false ");
+        }
+        boolean filtered = query != null && !query.trim().isEmpty();
+        if (filtered) {
+            // Bound as a parameter, never concatenated: this string comes straight from a
+            // query parameter typed by the user.
+            hql.append("and (lower(l.modality) like :q or lower(l.studyDescription) like :q ")
+               .append("or lower(l.studyDate) like :q or lower(l.orthancStudyUid) like :q) ");
+        }
+        hql.append("order by l.report.dateCreated desc");
+
+        org.hibernate.query.Query<ReportImageLink> jpql = sessionFactory.getCurrentSession()
+                .createQuery(hql.toString(), ReportImageLink.class);
+        if (filtered) {
+            jpql.setParameter("q", "%" + query.trim().toLowerCase() + "%");
+        }
+        // Over-fetch before de-duplicating: several links can share one study UID, so the
+        // page size is only reached after collapsing them.
+        jpql.setMaxResults(Math.max(limit, 1) * 8);
+
+        java.util.Set<String> seen = new java.util.HashSet<String>();
+        List<ReportImageLink> distinct = new java.util.ArrayList<ReportImageLink>();
+        for (ReportImageLink link : jpql.list()) {
+            if (seen.add(link.getOrthancStudyUid())) {
+                distinct.add(link);
+                if (distinct.size() >= limit) {
+                    break;
+                }
+            }
+        }
+        return distinct;
+    }
+
     // -- versions --------------------------------------------------------
 
     public ImageReportVersion saveVersion(ImageReportVersion version) {
