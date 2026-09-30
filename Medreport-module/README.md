@@ -13,7 +13,7 @@ Two capabilities, one module:
    downloads it.
 
 **Target platform:** OpenMRS Platform 2.5.9 / Reference Application 2.12.2
-**Module ID:** `medreport` · **Package:** `org.openmrs.module.medreport` · **Version:** `1.2.0`
+**Module ID:** `medreport` · **Package:** `org.openmrs.module.medreport` · **Version:** `1.2.3`
 
 ---
 
@@ -464,7 +464,124 @@ cd report-generation-service && docker compose up --build -d && curl -fsS localh
 
 Versions follow semver: a **minor** bump for new capability, a **patch** bump for fixes only.
 
-### 1.2.0 — current
+### 1.2.3 — current
+
+**`medreport.css` 404'd on every page. Not a theme conflict - the file was in the wrong folder.**
+
+Reported against a live deployment: every medreport page rendered as unstyled structure -
+plain headings, no card/panel styling, no two-column search layout - while buttons still
+looked correctly themed. That split is exactly what 1.2.2's build stamp exists to catch: the
+page showed `medreport 1.2.2` with **no `- css` suffix at all**, and at full unstyled size
+instead of `.mr-build`'s small, right-aligned, muted treatment - proof the stylesheet never
+parsed, before anyone had to guess between browser caching, a stale `.omod`, or the theme.
+
+The network tab explained why: `ui.includeCss("medreport", "medreport.css")` always resolves
+to `.../ms/uiframework/resource/{moduleId}/styles/{file}` - the UI framework hardcodes
+`styles/` as the CSS resource folder, exactly the way `includeJavascript` hardcodes `scripts/`
+(which is why the JS always loaded fine). The stylesheet itself, however, shipped from
+`resources/css/medreport.css`, so the packaged `.omod` never had a file at the path the
+framework was requesting, and every load 404'd. `uicommons`, `appui`, and the CHU Blida theme's
+own `chu-theme.css` all loaded normally because those packages correctly use `styles/`; only
+medreport's was misplaced. The theme was never implicated - it restyles `.mr-btn-primary`
+directly and has nothing to do with the missing panels, borders, or layout that
+`medreport.css` supplies, which is exactly what made a working theme look like it was
+"overriding everything" once medreport's own rules stopped arriving.
+
+**Fixed:** `medreport.css` moved from `resources/css/` to `resources/styles/`. No selector,
+markup, or behaviour changed - only where the file lives in the module.
+`ModuleWiringTest.everyCssClassIsPrefixed`, which reads the file directly off disk, updated to
+the new path so it does not silently start passing against a file that no longer exists there.
+
+**Also in 1.2.3:** the home-page "Comptes rendus d'imagerie" tile
+(`medreport.home.reportSearch`) used `icon-search`, a plain magnifying glass that said nothing
+about clinical imaging. Swapped for `icon-edit` (Font Awesome 3.2.1's pencil-over-page glyph -
+the icon set OpenMRS's `uicommons`/`appui` expose under this `icon-*` naming). Font Awesome
+3.2.1 has no brain glyph at all, so a literal neuro icon was not on the table; `icon-edit` was
+the closest available match to a written report. `icon-picture` (a photo glyph, closer to
+"imagery") and `icon-file-text-alt` (a page-with-lines glyph, closer to "report") are the other
+reasonable candidates already present in the same icon set, if this one doesn't read right in
+practice.
+
+> **Upgrading note.** After installing 1.2.3, confirm the fix by reading the build stamp: it
+> should say `medreport 1.2.3 - css 1.2.3`, small and right-aligned above the page title. If
+> the `- css` suffix is still missing, the stylesheet is still not reaching the browser -
+> check for a stale `.omod` left installed alongside the new one (see 1.2.2) before suspecting
+> anything else.
+
+### 1.2.2
+
+**A build stamp on every page, because "which version am I looking at" was unanswerable.**
+
+1.2.1 shipped a theory: a page that rendered as bare text with a correctly-coloured Search
+button was a browser serving a cached older `medreport.css` against newer markup. The theory
+was wrong, and it cost a round trip to find out. A hard reload and a fresh upload changed
+nothing, because the stale copy was not in the browser — **an older `.omod` was still
+installed on the server**. OpenMRS keys uploaded modules by filename, and every release here
+changes the filename (`medreport1.2.2.omod`), so uploading without deleting the previous file
+can leave two builds of the same module id side by side.
+
+Every local check passed throughout, and all of them were beside the point: the artifact was
+never the problem. What was missing was any way to tell, from the rendered page, **which
+artifact was being served**. The symptom of "old module" and the symptom of "new module,
+stylesheet missing" were identical on screen, so both diagnoses fit and only one was right.
+
+So each page now prints a stamp, top right:
+
+```
+medreport 1.2.2 - css 1.2.2
+```
+
+Two numbers from two independent sources:
+
+| Source | Where it comes from | What it proves |
+| --- | --- | --- |
+| `medreport <n>` | `ModuleFactory.getModuleById("medreport").getVersion()`, read per request | which `.omod` the server actually loaded |
+| `- css <n>` | a literal in `medreport.css`, appended with `content:` | that *this* stylesheet was fetched **and parsed** |
+
+Read together they separate the three cases that previously looked alike: an old module
+(wrong first number), a stylesheet that never arrived (no suffix), and a healthy page (both
+present and equal). Deliberately not derived from one another — a version the stylesheet
+inherited from the page would prove nothing about which stylesheet the browser parsed, and a
+constant compiled into the jar would report the version of the jar it was compiled into,
+which is precisely the fact in doubt.
+
+`MedreportBuild.version()` supplies the first; the four page controllers add it to the model;
+`.mr-build` styles it and appends the second. No schema, privilege or behaviour change.
+
+> **Keep the CSS literal in step with the module version on every release.** If they drift,
+> the stamp reports a disagreement that is not real. There is no way to assert this in a unit
+> test without reintroducing the coupling the split exists to avoid.
+
+### 1.2.1
+
+**Coexistence with the CHU Blida theme (`chublidatheme`).**
+
+That module injects its stylesheet immediately before `</head>` — i.e. *after* every module
+stylesheet — and it already themes medreport directly: `.mr-card`, `.mr-btn-primary`,
+`.mr-btn`, `.mr-dialog` and the card headings are restyled with `!important` to the hospital
+palette. It also deliberately *excludes* `mr-` from its global button and form-control resets.
+In other words the theme is a willing partner, and colour is its job.
+
+medreport now reflects that split explicitly: **medreport owns structure, the theme owns
+colour.** Every token in `:root` is `var(--chu-…, <fallback>)`, so:
+
+- with the theme installed, the module adopts the hospital palette and the page is one
+  coherent colour scheme instead of half theme-green and half medreport-blue;
+- with no theme installed, the fallbacks apply and nothing changes.
+
+No markup or behaviour changed.
+
+> **Upgrading note.** The theme sets `.mr-card` *border-colour, radius and shadow only* — it
+> supplies no background, padding or layout, because it assumes this stylesheet provides them.
+> So if `medreport.css` fails to load, the page renders as bare text with a correctly-themed
+> Search button, which looks like "the theme overrode everything" but is the opposite.
+>
+> This note originally attributed that symptom to browser caching and prescribed a hard
+> reload. That was only ever one of its causes, and in practice not the common one — an older
+> `.omod` left installed on the server produces the same picture and is immune to reloading.
+> See 1.2.2, which makes the two distinguishable at a glance.
+
+### 1.2.0
 
 A UI release. No schema change, no privilege change, no Liquibase migration.
 

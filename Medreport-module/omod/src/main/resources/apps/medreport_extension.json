@@ -25,7 +25,7 @@
     "type": "link",
     "label": "Comptes rendus d'imagerie",
     "url": "medreport/myReports.page",
-    "icon": "icon-search",
+    "icon": "icon-edit",
     "order": 120,
     "requiredPrivilege": "App: medreport.imaging.view"
   }

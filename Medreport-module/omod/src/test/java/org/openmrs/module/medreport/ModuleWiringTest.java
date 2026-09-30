@@ -625,7 +625,7 @@ public class ModuleWiringTest {
     public void everyCssClassIsPrefixed() throws Exception {
         // Strip comments first: the file's own header explains the rule by naming the
         // Bootstrap classes it avoids, and those mentions are not selectors.
-        String css = read(new File(WEBAPP, "resources/css/medreport.css"))
+        String css = read(new File(WEBAPP, "resources/styles/medreport.css"))
                 .replaceAll("(?s)/\\*.*?\\*/", "");
         Matcher matcher = Pattern.compile("\\.([a-zA-Z][\\w-]*)").matcher(css);
         Set<String> offenders = new LinkedHashSet<String>();

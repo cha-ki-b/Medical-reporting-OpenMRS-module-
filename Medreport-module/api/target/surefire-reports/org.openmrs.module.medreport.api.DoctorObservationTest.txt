@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: org.openmrs.module.medreport.api.DoctorObservationTest
 -------------------------------------------------------------------------------
-Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.493 s -- in org.openmrs.module.medreport.api.DoctorObservationTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.838 s -- in org.openmrs.module.medreport.api.DoctorObservationTest

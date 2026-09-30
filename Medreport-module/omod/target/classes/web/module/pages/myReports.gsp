@@ -15,6 +15,16 @@
 
 <div class="mr-wrap">
 
+    <% /*
+      Which build is this? Printed, not inferred. Two independent numbers: the module
+      version comes from the running module registry (server side), and " . css x.y.z"
+      is appended by medreport.css itself. Seeing both, and seeing them agree, is proof
+      that the .omod you uploaded is the one being served and that its stylesheet
+      reached the browser. A missing suffix means the stylesheet did not load; an
+      unexpected version means an older .omod is still installed alongside the new one.
+    */ %>
+    <p class="mr-build">medreport ${ buildStamp }</p>
+
     <div class="mr-page-head">
         <div>
             <h1>${ ui.message("medreport.search.title") }</h1>

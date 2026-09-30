@@ -1,5 +1,6 @@
 package org.openmrs.module.medreport.page.controller;
 
+import org.openmrs.module.medreport.web.MedreportBuild;
 import org.openmrs.module.medreport.MedreportPrivileges;
 import org.openmrs.ui.framework.page.PageModel;
 
@@ -18,6 +19,8 @@ import org.openmrs.ui.framework.page.PageModel;
 public class MyReportsPageController {
 
     public void controller(PageModel model) {
+        // Printed on the page so the running build is visible without guessing (see MedreportBuild).
+        model.addAttribute("buildStamp", MedreportBuild.version());
         boolean canView = MedreportPrivileges.canViewImaging();
         model.addAttribute("accessDenied", !canView);
         model.addAttribute("canManage", MedreportPrivileges.canManageImaging());

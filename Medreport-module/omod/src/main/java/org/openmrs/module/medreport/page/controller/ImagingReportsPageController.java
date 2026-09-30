@@ -1,5 +1,6 @@
 package org.openmrs.module.medreport.page.controller;
 
+import org.openmrs.module.medreport.web.MedreportBuild;
 import org.openmrs.Patient;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.medreport.MedreportPrivileges;
@@ -30,6 +31,8 @@ public class ImagingReportsPageController {
                            @RequestParam(value = "studyUid", required = false) String studyUid,
                            @RequestParam(value = "seriesUid", required = false) String seriesUid,
                            @RequestParam(value = "new", required = false) String openEditor) {
+        // Printed on the page so the running build is visible without guessing (see MedreportBuild).
+        model.addAttribute("buildStamp", MedreportBuild.version());
 
         Patient patient = resolvePatient(patientId);
         model.addAttribute("patient", patient);

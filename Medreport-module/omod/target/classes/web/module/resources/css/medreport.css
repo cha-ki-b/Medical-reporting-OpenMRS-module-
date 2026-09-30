@@ -18,36 +18,51 @@
  */
 
 :root {
+    /*
+     * Every token below is `var(--chu-…, <fallback>)`.
+     *
+     * The CHU Blida theme module (`chublidatheme`) injects its stylesheet immediately before
+     * </head>, i.e. AFTER this file, and already themes medreport directly - it restyles
+     * .mr-card, .mr-btn-primary, .mr-dialog and friends with !important to match the
+     * hospital's palette. Fighting that would be wrong: the theme is supposed to own colour.
+     *
+     * So medreport owns STRUCTURE (layout, spacing, the card/metadata/content hierarchy) and
+     * defers COLOUR to the theme when one is installed. Reading the theme's own tokens means
+     * the two agree instead of producing a page that is half hospital-green and half
+     * medreport-blue. With no theme installed the fallbacks apply and the module looks
+     * exactly as it does standalone.
+     */
+
     /* Ink */
-    --mr-text: #16202c;
-    --mr-muted: #5b6b7c;
-    --mr-faint: #8496a6;
+    --mr-text:  var(--chu-ink, #16202c);
+    --mr-muted: var(--chu-ink-muted, #5b6b7c);
+    --mr-faint: var(--chu-ink-subtle, #8496a6);
 
-    /* Accent */
-    --mr-accent: #1f4e79;
-    --mr-accent-dark: #14375a;
-    --mr-accent-soft: #e9f0f7;
+    /* Accent. --chu-action is the theme's primary action colour. */
+    --mr-accent:      var(--chu-action, #1f4e79);
+    --mr-accent-dark: var(--chu-action-hover, #14375a);
+    --mr-accent-soft: var(--chu-action-soft, #e9f0f7);
 
-    /* Surfaces and lines. Deliberately darker than the previous pale values: a 1px #d6dee7
+    /* Surfaces and lines. Deliberately darker than the original pale values: a 1px #d6dee7
        border on a white card was invisible in practice, which is why the filter panel and
        the results read as one undifferentiated wall of text. */
-    --mr-surface: #ffffff;
+    --mr-surface:        var(--chu-surface, #ffffff);
     --mr-surface-sunken: #f4f7fa;
-    --mr-border: #c8d4e0;
-    --mr-border-strong: #a9bbcd;
+    --mr-border:         var(--chu-border, #c8d4e0);
+    --mr-border-strong:  var(--chu-border-control, #a9bbcd);
 
     /* State */
-    --mr-ok: #1b6e34;
-    --mr-ok-soft: #e7f4ec;
-    --mr-warn: #8a6100;
-    --mr-warn-soft: #fdf4e3;
-    --mr-danger: #a02020;
-    --mr-danger-soft: #fbebeb;
+    --mr-ok:          var(--chu-success, #1b6e34);
+    --mr-ok-soft:     var(--chu-success-bg, #e7f4ec);
+    --mr-warn:        var(--chu-warning, #8a6100);
+    --mr-warn-soft:   var(--chu-warning-bg, #fdf4e3);
+    --mr-danger:      var(--chu-critical, #a02020);
+    --mr-danger-soft: var(--chu-critical-bg, #fbebeb);
 
-    --mr-radius: 8px;
-    --mr-radius-sm: 5px;
-    --mr-shadow: 0 1px 2px rgba(22, 32, 44, .06), 0 2px 8px rgba(22, 32, 44, .05);
-    --mr-shadow-lift: 0 2px 6px rgba(22, 32, 44, .10), 0 8px 24px rgba(22, 32, 44, .10);
+    --mr-radius:    var(--chu-radius-lg, 8px);
+    --mr-radius-sm: var(--chu-radius-md, 5px);
+    --mr-shadow:      var(--chu-shadow-1, 0 1px 2px rgba(22, 32, 44, .06), 0 2px 8px rgba(22, 32, 44, .05));
+    --mr-shadow-lift: var(--chu-shadow-2, 0 2px 6px rgba(22, 32, 44, .10), 0 8px 24px rgba(22, 32, 44, .10));
 }
 
 /* =====================================================================
@@ -319,7 +334,7 @@
 
 /* Patient / study identifiers: monospace so digits line up and are obviously an id. */
 .mr-ident {
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-family: var(--chu-font-mono, "SFMono-Regular", Consolas, "Liberation Mono", monospace);
     font-size: .8rem;
     font-weight: 400;
     color: var(--mr-muted);
