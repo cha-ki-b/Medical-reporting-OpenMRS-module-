@@ -1,5 +1,6 @@
 package org.openmrs.module.medreport.page.controller;
 
+import org.openmrs.module.medreport.web.MedreportBuild;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.medreport.MedreportConstants;
 import org.openmrs.module.medreport.MedreportPrivileges;
@@ -30,6 +31,8 @@ public class SettingsPageController {
 
     public void controller(PageModel model,
                            @RequestParam(value = "refresh", required = false) String refresh) {
+        // Printed on the page so the running build is visible without guessing (see MedreportBuild).
+        model.addAttribute("buildStamp", MedreportBuild.version());
         // Admin-only. The audit log lists patient ids and clinician names, so this page is
         // gated at least as tightly as the reports it describes.
         if (!MedreportPrivileges.isReportAdmin()) {

@@ -2,11 +2,15 @@
  * Cross-patient report search.
  *
  * Answers the clinical question the per-patient panel cannot: "show me everything user2 wrote
- * about studies 5 and 6". The two filters are independent SETS and they intersect - authors
- * AND images - which is why both are checkbox lists rather than single-value selects.
+ * about studies 5 and 6". The two filters are independent SETS and they intersect.
  *
- * Both lists are populated from what actually exists in the reports (distinct authors,
- * distinct covered studies), so they stay short and every entry returns at least one result.
+ * Why token fields instead of checkbox lists
+ * ------------------------------------------
+ * The first version rendered a checkbox per author and per image. That works for a demo and
+ * fails completely in production: Orthanc holds thousands of studies, so the filter panel
+ * became an unusable 2000-row scroll, and it fetched the entire catalogue on every page load.
+ * Here the widget shows only what has been *selected*, as removable chips, and queries the
+ * server as the user types. Its size is bounded by the selection, not by the catalogue.
  *
  * As everywhere in this module, the per-report canEdit/canRemove flags come from the server
  * on every response. They decide what renders; the server decides what is permitted.
@@ -15,23 +19,28 @@ var medreportSearch = (function () {
     'use strict';
 
     var cfg = {};
-    var authors = [];
-    var images = [];
-
     var SEP = ' · ';
+    var DEBOUNCE_MS = 220;
+
+    /* Selected tokens, by filter. Values are {id|studyUid, label}. */
+    var selection = { author: [], image: [] };
 
     function $(id) { return document.getElementById(id); }
 
     function el(tag, className, text) {
         var node = document.createElement(tag);
         if (className) { node.className = className; }
-        // textContent: report text is clinician-authored and study descriptions come from
-        // DICOM. Neither is markup we control.
+        // textContent, never innerHTML: report text is clinician-authored and study
+        // descriptions come from DICOM. Neither is markup we control.
         if (text !== undefined && text !== null) { node.textContent = text; }
         return node;
     }
 
     function m(key) { return (cfg.messages && cfg.messages[key]) || key; }
+
+    // ---------------------------------------------------------------
+    // transport
+    // ---------------------------------------------------------------
 
     function readJson(response) {
         return response.json().catch(function () {
@@ -62,84 +71,218 @@ var medreportSearch = (function () {
     }
 
     // ---------------------------------------------------------------
-    // filters
+    // token fields
     // ---------------------------------------------------------------
 
-    function renderFilters() {
-        renderCheckList($('mr-author-list'), authors, 'author', function (a) {
-            return a.label || a.username;
-        });
-        renderCheckList($('mr-image-list'), images, 'image', function (i) {
-            return i.label || i.studyUid;
-        });
-        updateCounts();
+    function tokenKey(kind, item) {
+        return kind === 'author' ? String(item.id) : String(item.studyUid);
     }
 
-    function renderCheckList(host, items, kind, labelOf) {
-        if (!host) { return; }
-        host.innerHTML = '';
-        if (!items.length) {
-            host.appendChild(el('p', 'mr-empty', '-'));
-            return;
+    function isSelected(kind, item) {
+        var key = tokenKey(kind, item);
+        return selection[kind].some(function (chosen) {
+            return tokenKey(kind, chosen) === key;
+        });
+    }
+
+    function addToken(kind, item) {
+        if (!isSelected(kind, item)) {
+            selection[kind].push(item);
+            renderTokens(kind);
+            search();
         }
-        items.forEach(function (item, index) {
-            var row = el('label', 'mr-check');
-            var box = document.createElement('input');
-            box.type = 'checkbox';
-            box.dataset.mrKind = kind;
-            box.dataset.mrIndex = String(index);
-            box.addEventListener('change', updateCounts);
-            row.appendChild(box);
-            row.appendChild(el('span', null, labelOf(item)));
-            host.appendChild(row);
+    }
+
+    function removeToken(kind, item) {
+        var key = tokenKey(kind, item);
+        selection[kind] = selection[kind].filter(function (chosen) {
+            return tokenKey(kind, chosen) !== key;
+        });
+        renderTokens(kind);
+        search();
+    }
+
+    function renderTokens(kind) {
+        var field = $('mr-' + kind + '-field');
+        var input = $('mr-' + kind + '-input');
+        if (!field || !input) { return; }
+
+        // Rebuild the chips in place, always leaving the input as the last child so typing
+        // continues where the user expects.
+        Array.prototype.slice.call(field.querySelectorAll('.mr-token'))
+            .forEach(function (node) { node.remove(); });
+
+        selection[kind].forEach(function (item) {
+            var token = el('span', 'mr-token');
+            token.appendChild(el('span', null, item.label));
+
+            var close = el('button', null, '×');
+            close.type = 'button';
+            close.setAttribute('aria-label', m('remove') + ' ' + item.label);
+            close.addEventListener('click', function () { removeToken(kind, item); });
+            token.appendChild(close);
+
+            field.insertBefore(token, input);
         });
     }
 
-    function checkedIndexes(kind) {
-        return Array.prototype.slice
-            .call(document.querySelectorAll('input[data-mr-kind="' + kind + '"]'))
-            .filter(function (box) { return box.checked; })
-            .map(function (box) { return parseInt(box.dataset.mrIndex, 10); });
+    /* --- suggestions ------------------------------------------------ */
+
+    var timers = {};
+    var activeIndex = {};
+
+    function querySuggestions(kind) {
+        var input = $('mr-' + kind + '-input');
+        var box = $('mr-' + kind + '-suggest');
+        if (!input || !box) { return; }
+
+        var url = cfg.base + '/filterSearch.form?kind=' + (kind === 'author' ? 'authors' : 'images')
+                + '&q=' + encodeURIComponent(input.value.trim());
+
+        get(url).then(function (body) {
+            var items = (kind === 'author' ? body.authors : body.images) || [];
+            renderSuggestions(kind, items);
+        }).catch(function (error) {
+            notify('error', error.message);
+        });
     }
 
-    function updateCounts() {
-        var a = checkedIndexes('author').length;
-        var i = checkedIndexes('image').length;
-        var authorBadge = $('mr-author-count');
-        var imageBadge = $('mr-image-count');
-        if (authorBadge) { authorBadge.textContent = a + ' ' + m('selected'); }
-        if (imageBadge) { imageBadge.textContent = i + ' ' + m('selected'); }
+    function renderSuggestions(kind, items) {
+        var box = $('mr-' + kind + '-suggest');
+        var input = $('mr-' + kind + '-input');
+        if (!box) { return; }
+
+        box.innerHTML = '';
+        activeIndex[kind] = -1;
+
+        var available = items.filter(function (item) { return !isSelected(kind, item); });
+
+        if (!available.length) {
+            box.appendChild(el('div', 'mr-suggest-empty', m('noMatch')));
+        } else {
+            available.forEach(function (item, index) {
+                var option = el('button', 'mr-suggest-item');
+                option.type = 'button';
+                option.setAttribute('role', 'option');
+                option.dataset.mrIndex = String(index);
+                option.appendChild(el('strong', null, item.label));
+                if (item.username) {
+                    option.appendChild(el('span', 'mr-meta', item.username));
+                }
+                option.addEventListener('click', function () {
+                    addToken(kind, item);
+                    input.value = '';
+                    hideSuggestions(kind);
+                    input.focus();
+                });
+                box.appendChild(option);
+            });
+            // The server caps the page; say so rather than implying this is everything.
+            if (available.length >= 15) {
+                box.appendChild(el('div', 'mr-suggest-more', m('more')));
+            }
+        }
+
+        box.hidden = false;
+        if (input) { input.setAttribute('aria-expanded', 'true'); }
     }
 
-    function clearFilters() {
-        Array.prototype.slice.call(document.querySelectorAll('input[data-mr-kind]'))
-            .forEach(function (box) { box.checked = false; });
-        var mine = $('mr-mine-only');
-        if (mine) { mine.checked = false; }
-        updateCounts();
-        search();
+    function hideSuggestions(kind) {
+        var box = $('mr-' + kind + '-suggest');
+        var input = $('mr-' + kind + '-input');
+        if (box) { box.hidden = true; }
+        if (input) { input.setAttribute('aria-expanded', 'false'); }
+        activeIndex[kind] = -1;
+    }
+
+    function moveActive(kind, delta) {
+        var box = $('mr-' + kind + '-suggest');
+        if (!box || box.hidden) { return; }
+        var options = box.querySelectorAll('.mr-suggest-item');
+        if (!options.length) { return; }
+
+        var next = (activeIndex[kind] === undefined ? -1 : activeIndex[kind]) + delta;
+        if (next < 0) { next = options.length - 1; }
+        if (next >= options.length) { next = 0; }
+        activeIndex[kind] = next;
+
+        Array.prototype.forEach.call(options, function (option, index) {
+            option.classList.toggle('mr-suggest-active', index === next);
+        });
+        options[next].scrollIntoView({ block: 'nearest' });
+    }
+
+    function bindTokenField(kind) {
+        var input = $('mr-' + kind + '-input');
+        var field = $('mr-' + kind + '-field');
+        var box = $('mr-' + kind + '-suggest');
+        if (!input || !field) { return; }
+
+        // Clicking anywhere in the chip area focuses the input, as a text field should.
+        field.addEventListener('click', function (event) {
+            if (event.target === field) { input.focus(); }
+        });
+
+        input.addEventListener('input', function () {
+            window.clearTimeout(timers[kind]);
+            timers[kind] = window.setTimeout(function () {
+                querySuggestions(kind);
+            }, DEBOUNCE_MS);
+        });
+
+        input.addEventListener('focus', function () { querySuggestions(kind); });
+
+        input.addEventListener('keydown', function (event) {
+            if (event.key === 'ArrowDown') { event.preventDefault(); moveActive(kind, 1); }
+            else if (event.key === 'ArrowUp') { event.preventDefault(); moveActive(kind, -1); }
+            else if (event.key === 'Escape') { hideSuggestions(kind); }
+            else if (event.key === 'Enter') {
+                event.preventDefault();
+                var active = box && box.querySelector('.mr-suggest-active');
+                if (active) { active.click(); }
+            } else if (event.key === 'Backspace' && input.value === ''
+                       && selection[kind].length) {
+                // Backspace on an empty input removes the last chip - standard for this widget.
+                removeToken(kind, selection[kind][selection[kind].length - 1]);
+            }
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!field.contains(event.target) && (!box || !box.contains(event.target))) {
+                hideSuggestions(kind);
+            }
+        });
     }
 
     // ---------------------------------------------------------------
     // search
     // ---------------------------------------------------------------
 
+    function clearFilters() {
+        selection.author = [];
+        selection.image = [];
+        renderTokens('author');
+        renderTokens('image');
+        var mine = $('mr-mine-only');
+        if (mine) { mine.checked = false; }
+        search();
+    }
+
     function search() {
         clearNotice();
         var button = $('mr-search');
         if (button) { button.disabled = true; }
 
-        var authorIds = checkedIndexes('author').map(function (i) { return authors[i].id; });
-        var studyUids = checkedIndexes('image').map(function (i) { return images[i].studyUid; });
         var mine = $('mr-mine-only') && $('mr-mine-only').checked;
-
         var params = [];
         // "mine" is resolved server-side from the session, so no author id is sent for it.
-        if (!mine && authorIds.length) {
-            params.push('authorIds=' + encodeURIComponent(authorIds.join(',')));
+        if (!mine && selection.author.length) {
+            params.push('authorIds=' + encodeURIComponent(
+                selection.author.map(function (a) { return a.id; }).join(',')));
         }
-        if (studyUids.length) {
-            params.push('studyUids=' + encodeURIComponent(studyUids.join(',')));
+        if (selection.image.length) {
+            params.push('studyUids=' + encodeURIComponent(
+                selection.image.map(function (i) { return i.studyUid; }).join(',')));
         }
         if (mine) { params.push('mine=true'); }
 
@@ -150,9 +293,7 @@ var medreportSearch = (function () {
         }
 
         get(cfg.base + '/reportSearch.form?' + params.join('&'))
-            .then(function (body) {
-                renderResults(body.reports || []);
-            })
+            .then(function (body) { renderResults(body.reports || []); })
             .catch(function (error) {
                 notify('error', error.message);
                 renderResults([]);
@@ -167,10 +308,10 @@ var medreportSearch = (function () {
         if (!host) { return; }
         host.innerHTML = '';
 
-        var counter = $('mr-result-count');
-        if (counter) {
-            counter.textContent = reports.length + ' ' + m('results');
-        }
+        var count = $('mr-kpi-count');
+        if (count) { count.textContent = String(reports.length); }
+        var title = $('mr-results-title');
+        if (title) { title.textContent = reports.length + ' ' + m('results'); }
 
         if (!reports.length) {
             host.appendChild(el('p', 'mr-empty', m('none')));
@@ -181,38 +322,33 @@ var medreportSearch = (function () {
         });
     }
 
+    /**
+     * One report card, in three visually distinct tiers: title, a labelled metadata strip,
+     * and the clinical text in its own panel. Previously all three were the same muted text,
+     * which is what made the list unreadable.
+     */
     function renderReport(report) {
         var current = report.current || {};
-        var card = el('div', 'mr-report'
+        var patient = report.patient || {};
+
+        var card = el('article', 'mr-report'
             + (report.isOwn ? ' mr-own' : '')
             + (report.voided ? ' mr-removed' : ''));
 
         var head = el('div', 'mr-report-head');
-        head.appendChild(el('span', 'mr-report-title', current.title || '-'));
-        if (report.isOwn) {
-            head.appendChild(el('span', 'mr-tag mr-tag-own', m('own')));
-        }
-        if (report.voided) {
-            head.appendChild(el('span', 'mr-tag mr-tag-removed', m('removed')));
-        }
+        head.appendChild(el('h3', 'mr-report-title', current.title || m('untitled')));
+        if (report.isOwn) { head.appendChild(el('span', 'mr-tag mr-tag-own', m('own'))); }
+        if (report.voided) { head.appendChild(el('span', 'mr-tag mr-tag-removed', m('removed'))); }
         card.appendChild(head);
 
-        // Cross-patient results are unusable without saying whose record each row is.
-        var patient = report.patient || {};
-        var patientLine = el('div', 'mr-meta');
-        patientLine.appendChild(document.createTextNode(m('patient') + ' : '));
-        patientLine.appendChild(el('strong', null,
-            [patient.familyName, patient.givenName].filter(Boolean).join(' ') || '-'));
-        if (patient.identifier) {
-            patientLine.appendChild(document.createTextNode(SEP + patient.identifier));
+        var meta = el('dl', 'mr-report-meta');
+        var name = [patient.familyName, patient.givenName].filter(Boolean).join(' ');
+        meta.appendChild(metaEntry(m('patient'), name || '-', patient.identifier));
+        meta.appendChild(metaEntry(m('author'), report.author || '-'));
+        meta.appendChild(metaEntry(m('date'), current.dateCreated || '-'));
+        if (current.versionNumber) {
+            meta.appendChild(metaEntry(m('version'), String(current.versionNumber)));
         }
-        card.appendChild(patientLine);
-
-        var meta = el('div', 'mr-meta');
-        meta.appendChild(document.createTextNode(m('author') + ' : '));
-        meta.appendChild(el('strong', null, report.author || '-'));
-        meta.appendChild(document.createTextNode(
-            SEP + (current.dateCreated || '') + SEP + m('version') + ' ' + (current.versionNumber || 1)));
         card.appendChild(meta);
 
         if (current.observationText) {
@@ -231,6 +367,17 @@ var medreportSearch = (function () {
         return card;
     }
 
+    function metaEntry(label, value, identifier) {
+        var row = el('div');
+        row.appendChild(el('dt', null, label));
+        var dd = el('dd', null, value);
+        if (identifier) {
+            dd.appendChild(el('span', 'mr-ident', identifier));
+        }
+        row.appendChild(dd);
+        return row;
+    }
+
     function renderActions(report, current, patient) {
         var actions = el('div', 'mr-report-actions');
 
@@ -242,27 +389,28 @@ var medreportSearch = (function () {
         }
 
         // Editing happens on the patient's own imaging-reports page, which already has the
-        // image picker and the full editor. Duplicating that here would mean two editors to
+        // image picker and the full editor. Duplicating it here would mean two editors to
         // keep in step, so this links across instead.
-        if (patient.id) {
+        var patientPage = patient.id
+            ? '/' + OPENMRS_CONTEXT_PATH + '/medreport/imagingReports.page?patientId='
+              + encodeURIComponent(patient.id)
+            : null;
+
+        if (patientPage) {
             var open = el('a', 'mr-btn mr-btn-small', m('open'));
-            open.href = '/' + OPENMRS_CONTEXT_PATH
-                      + '/medreport/imagingReports.page?patientId=' + encodeURIComponent(patient.id);
+            open.href = patientPage;
             actions.appendChild(open);
         }
 
-        // Shown disabled with a reason on someone else's report rather than hidden, so it
-        // reads as "not yours" instead of a missing feature. The server enforces it anyway.
+        // Disabled with a reason on someone else's report rather than hidden, so it reads as
+        // "not yours" instead of a missing feature. The server enforces it regardless.
         var edit = el('button', 'mr-btn mr-btn-small', m('edit'));
         edit.type = 'button';
-        if (report.canEdit && patient.id) {
-            edit.addEventListener('click', function () {
-                window.location.href = '/' + OPENMRS_CONTEXT_PATH
-                    + '/medreport/imagingReports.page?patientId=' + encodeURIComponent(patient.id);
-            });
+        if (report.canEdit && patientPage) {
+            edit.addEventListener('click', function () { window.location.href = patientPage; });
         } else {
             edit.disabled = true;
-            edit.title = report.isOwn ? '' : m('notOwner');
+            if (!report.isOwn) { edit.title = m('notOwner'); }
         }
         actions.appendChild(edit);
 
@@ -276,6 +424,9 @@ var medreportSearch = (function () {
     function init(options) {
         cfg = options || {};
 
+        bindTokenField('author');
+        bindTokenField('image');
+
         var searchButton = $('mr-search');
         if (searchButton) { searchButton.addEventListener('click', search); }
         var clearButton = $('mr-clear');
@@ -283,17 +434,8 @@ var medreportSearch = (function () {
         var mine = $('mr-mine-only');
         if (mine) { mine.addEventListener('change', search); }
 
-        get(cfg.base + '/reportFilters.form')
-            .then(function (body) {
-                authors = body.authors || [];
-                images = body.images || [];
-                renderFilters();
-                // Land on something useful rather than an empty screen.
-                search();
-            })
-            .catch(function (error) {
-                notify('error', error.message);
-            });
+        // Land on something useful rather than an empty screen.
+        search();
     }
 
     return { init: init, search: search };

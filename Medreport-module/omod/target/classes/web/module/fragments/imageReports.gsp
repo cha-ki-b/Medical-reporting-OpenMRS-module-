@@ -21,20 +21,27 @@
     def patientId = config.patientId ?: ''
 %>
 
-<div class="mr-panel" id="mr-imaging-panel">
-    <h2>${ ui.message("medreport.imaging.title") }</h2>
-    <div class="mr-panel-body">
+<div class="mr-card" id="mr-imaging-panel">
+    <div class="mr-card-head">
+        <h2>${ ui.message("medreport.imaging.title") }</h2>
+        <span class="mr-meta" id="mr-list-summary"></span>
+    </div>
 
-        <% if (!canView) { %>
+    <% if (!canView) { %>
 
+        <div class="mr-card-body">
             <% /* No view privilege: say nothing about whether reports exist for this patient. */ %>
             <p class="mr-empty">${ ui.message("medreport.accessDenied") }</p>
+        </div>
 
-        <% } else { %>
+    <% } else { %>
 
-            <div id="mr-imaging-notice" class="mr-note" hidden></div>
-
-            <div class="mr-tree-tools">
+        <% /*
+          The controls live in their own strip between the card header and the list, so the
+          "what can I do" row is never mistaken for the first report - which is exactly how
+          the previous single-column layout read.
+        */ %>
+        <div class="mr-toolbar-row">
                 <% /*
                   RP6, UI half: the create button renders enabled only for a user holding
                   medreport.imaging.manage. The POST endpoint re-checks the same privilege, so
@@ -51,33 +58,37 @@
                     </button>
                 <% } %>
 
-                <% /* Requirement 2: pick an image, get every report about it. */ %>
-                <label class="mr-inline-label" for="mr-image-filter">
+            <div class="mr-toolbar-spacer"></div>
+
+            <% /* Requirement 2: pick an image, get every report about it. */ %>
+            <label class="mr-inline-label" for="mr-image-filter">
                     ${ ui.message("medreport.imaging.filterByImage") }
                 </label>
                 <select id="mr-image-filter" class="mr-select mr-select-inline">
                     <option value="">${ ui.message("medreport.imaging.allImages") }</option>
                 </select>
 
-                <% /* Requirement 3: see my own reports. */ %>
-                <label class="mr-check mr-check-inline">
-                    <input type="checkbox" id="mr-mine-only"/>
-                    <span>${ ui.message("medreport.imaging.mineOnly") }</span>
-                </label>
+            <% /* Requirement 3: see my own reports. */ %>
+            <label class="mr-switch mr-switch-sm">
+                <input type="checkbox" id="mr-mine-only"/>
+                <span class="mr-switch-track"></span>
+                <span class="mr-switch-label">${ ui.message("medreport.imaging.mineOnly") }</span>
+            </label>
 
-                <button type="button" id="mr-refresh" class="mr-btn mr-btn-small">
-                    ${ ui.message("medreport.imaging.refresh") }
-                </button>
-            </div>
+            <button type="button" id="mr-refresh" class="mr-btn mr-btn-small">
+                ${ ui.message("medreport.imaging.refresh") }
+            </button>
+        </div>
 
-            <p class="mr-meta" id="mr-list-summary"></p>
+        <div class="mr-card-body">
+            <div id="mr-imaging-notice" class="mr-note" hidden></div>
             <div id="mr-report-list">
                 <p class="mr-empty">&hellip;</p>
             </div>
+        </div>
 
-        <% } %>
+    <% } %>
 
-    </div>
 </div>
 
 <% /* ============ editor ============ */ %>
@@ -191,6 +202,8 @@
                 noneMine: '${ ui.escapeJs(ui.message("medreport.imaging.noneMine")) }',
                 author: '${ ui.escapeJs(ui.message("medreport.imaging.author")) }',
                 version: '${ ui.escapeJs(ui.message("medreport.imaging.version")) }',
+                date: '${ ui.escapeJs(ui.message("medreport.imaging.date")) }',
+                untitled: '${ ui.escapeJs(ui.message("medreport.search.untitled")) }',
                 edit: '${ ui.escapeJs(ui.message("medreport.imaging.edit")) }',
                 remove: '${ ui.escapeJs(ui.message("medreport.imaging.remove")) }',
                 history: '${ ui.escapeJs(ui.message("medreport.imaging.history")) }',

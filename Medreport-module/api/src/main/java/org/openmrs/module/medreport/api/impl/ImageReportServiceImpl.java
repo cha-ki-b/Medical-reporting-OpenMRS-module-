@@ -201,6 +201,36 @@ public class ImageReportServiceImpl extends BaseOpenmrsService implements ImageR
         return dao.getDistinctReportedImages(MedreportPrivileges.isReportAdmin());
     }
 
+    public List<ReportImageLink> searchReportedImages(String query, int limit) {
+        MedreportPrivileges.requireImagingView();
+        return dao.searchReportedImages(query, MedreportPrivileges.isReportAdmin(),
+                limit > 0 ? limit : 20);
+    }
+
+    /**
+     * Filtered in memory on purpose: the candidate set is "clinicians who have written at
+     * least one report", which is tens of rows even in a large department. Pushing a name
+     * match into HQL would mean joining User to PersonName for no measurable gain.
+     */
+    public List<User> searchReportAuthors(String query, int limit) {
+        MedreportPrivileges.requireImagingView();
+        List<User> all = dao.getDistinctAuthors(MedreportPrivileges.isReportAdmin());
+        String needle = query != null ? query.trim().toLowerCase() : "";
+
+        List<User> matches = new ArrayList<User>();
+        for (User user : all) {
+            if (needle.isEmpty() || displayName(user).toLowerCase().contains(needle)
+                    || (user.getUsername() != null
+                        && user.getUsername().toLowerCase().contains(needle))) {
+                matches.add(user);
+                if (matches.size() >= (limit > 0 ? limit : 20)) {
+                    break;
+                }
+            }
+        }
+        return matches;
+    }
+
     // ==================================================================
     // Update (RP3, RP8)
     // ==================================================================

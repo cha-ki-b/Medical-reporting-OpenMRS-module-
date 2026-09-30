@@ -12,7 +12,7 @@
 
     <groupId>org.openmrs.module</groupId>
     <artifactId>medreport</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.3</version>
     <packaging>pom</packaging>
     <name>Medical Report</name>
     <description>

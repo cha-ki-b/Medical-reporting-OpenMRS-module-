@@ -190,28 +190,31 @@ var medreportImaging = (function () {
         });
     }
 
+    /**
+     * One report card in three visually distinct tiers - title, a labelled metadata strip,
+     * and the clinical text in its own panel. The previous version rendered all three as the
+     * same muted line of text, which is why the list was unreadable.
+     */
     function renderReport(report) {
         var current = report.current || {};
-        var card = el('div', 'mr-report'
+
+        var card = el('article', 'mr-report'
             + (report.isOwn ? ' mr-own' : '')
             + (report.voided ? ' mr-removed' : ''));
 
         var head = el('div', 'mr-report-head');
-        head.appendChild(el('span', 'mr-report-title', current.title || m('newReport')));
-        if (report.isOwn) {
-            head.appendChild(el('span', 'mr-tag mr-tag-own', m('own')));
-        }
-        if (report.voided) {
-            head.appendChild(el('span', 'mr-tag mr-tag-removed', m('removed')));
-        }
+        head.appendChild(el('h3', 'mr-report-title', current.title || m('untitled')));
+        if (report.isOwn) { head.appendChild(el('span', 'mr-tag mr-tag-own', m('own'))); }
+        if (report.voided) { head.appendChild(el('span', 'mr-tag mr-tag-removed', m('removed'))); }
         card.appendChild(head);
 
         // RP2: every report view shows its author, one's own or anyone else's.
-        var meta = el('div', 'mr-meta');
-        meta.appendChild(document.createTextNode(m('author') + ' : '));
-        meta.appendChild(el('strong', null, report.author || '-'));
-        meta.appendChild(document.createTextNode(
-            SEP + (current.dateCreated || '') + SEP + m('version') + ' ' + (current.versionNumber || 1)));
+        var meta = el('dl', 'mr-report-meta');
+        meta.appendChild(metaEntry(m('author'), report.author || '-'));
+        meta.appendChild(metaEntry(m('date'), current.dateCreated || '-'));
+        if (current.versionNumber) {
+            meta.appendChild(metaEntry(m('version'), String(current.versionNumber)));
+        }
         card.appendChild(meta);
 
         if (current.observationText) {
@@ -228,6 +231,13 @@ var medreportImaging = (function () {
 
         card.appendChild(renderActions(report, current));
         return card;
+    }
+
+    function metaEntry(label, value) {
+        var row = el('div');
+        row.appendChild(el('dt', null, label));
+        row.appendChild(el('dd', null, value));
+        return row;
     }
 
     function renderActions(report, current) {

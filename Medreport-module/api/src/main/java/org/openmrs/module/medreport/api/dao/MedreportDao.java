@@ -57,6 +57,16 @@ public interface MedreportDao {
     List<User> getDistinctAuthors(boolean includeVoided);
 
     /**
+     * Images covered by at least one report, matching {@code query}, capped at {@code limit}.
+     *
+     * <p>Filtered in SQL rather than in Java because this is the list that grows without
+     * bound: Orthanc holds thousands of studies and a busy department reports on many of
+     * them. The author list, by contrast, is inherently small (the clinicians who have
+     * written reports) and is filtered in memory.
+     */
+    List<ReportImageLink> searchReportedImages(String query, boolean includeVoided, int limit);
+
+    /**
      * Images that at least one report covers, newest report first. Populates the image filter
      * with exactly the studies worth filtering on, rather than every study in Orthanc.
      */

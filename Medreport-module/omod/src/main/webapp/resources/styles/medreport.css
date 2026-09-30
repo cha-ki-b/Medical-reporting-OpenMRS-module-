@@ -1,0 +1,1240 @@
+/*
+ * medreport styles.
+ *
+ * ---------------------------------------------------------------------------
+ * Two rules govern everything below.
+ *
+ * 1. EVERY class is `mr-`-prefixed, no exceptions. The Reference Application loads Bootstrap
+ *    globally, so .panel, .btn, .modal, .close and .badge are already taken and silently
+ *    restyle anything that reuses them. Enforced by ModuleWiringTest.
+ *
+ * 2. CONTAINERS carry the visual weight, not headings. The Reference Application styles
+ *    headings through `#content h1/h2/h3`, and an ID selector beats any number of classes -
+ *    so a design that depends on colouring an <h2> loses, which is exactly why the deployed
+ *    search page rendered a black heading and no header band. Backgrounds, borders and
+ *    spacing therefore live on the wrapping element, where nothing competes. The few
+ *    typography properties worth defending are marked !important and explained inline.
+ * ---------------------------------------------------------------------------
+ */
+
+:root {
+    /*
+     * Every token below is `var(--chu-…, <fallback>)`.
+     *
+     * The CHU Blida theme module (`chublidatheme`) injects its stylesheet immediately before
+     * </head>, i.e. AFTER this file, and already themes medreport directly - it restyles
+     * .mr-card, .mr-btn-primary, .mr-dialog and friends with !important to match the
+     * hospital's palette. Fighting that would be wrong: the theme is supposed to own colour.
+     *
+     * So medreport owns STRUCTURE (layout, spacing, the card/metadata/content hierarchy) and
+     * defers COLOUR to the theme when one is installed. Reading the theme's own tokens means
+     * the two agree instead of producing a page that is half hospital-green and half
+     * medreport-blue. With no theme installed the fallbacks apply and the module looks
+     * exactly as it does standalone.
+     */
+
+    /* Ink */
+    --mr-text:  var(--chu-ink, #16202c);
+    --mr-muted: var(--chu-ink-muted, #5b6b7c);
+    --mr-faint: var(--chu-ink-subtle, #8496a6);
+
+    /* Accent. --chu-action is the theme's primary action colour. */
+    --mr-accent:      var(--chu-action, #1f4e79);
+    --mr-accent-dark: var(--chu-action-hover, #14375a);
+    --mr-accent-soft: var(--chu-action-soft, #e9f0f7);
+
+    /* Surfaces and lines. Deliberately darker than the original pale values: a 1px #d6dee7
+       border on a white card was invisible in practice, which is why the filter panel and
+       the results read as one undifferentiated wall of text. */
+    --mr-surface:        var(--chu-surface, #ffffff);
+    --mr-surface-sunken: #f4f7fa;
+    --mr-border:         var(--chu-border, #c8d4e0);
+    --mr-border-strong:  var(--chu-border-control, #a9bbcd);
+
+    /* State */
+    --mr-ok:          var(--chu-success, #1b6e34);
+    --mr-ok-soft:     var(--chu-success-bg, #e7f4ec);
+    --mr-warn:        var(--chu-warning, #8a6100);
+    --mr-warn-soft:   var(--chu-warning-bg, #fdf4e3);
+    --mr-danger:      var(--chu-critical, #a02020);
+    --mr-danger-soft: var(--chu-critical-bg, #fbebeb);
+
+    --mr-radius:    var(--chu-radius-lg, 8px);
+    --mr-radius-sm: var(--chu-radius-md, 5px);
+    --mr-shadow:      var(--chu-shadow-1, 0 1px 2px rgba(22, 32, 44, .06), 0 2px 8px rgba(22, 32, 44, .05));
+    --mr-shadow-lift: var(--chu-shadow-2, 0 2px 6px rgba(22, 32, 44, .10), 0 8px 24px rgba(22, 32, 44, .10));
+}
+
+/* =====================================================================
+   Layout
+   ===================================================================== */
+
+.mr-wrap {
+    max-width: 1240px;
+    margin: 0 auto 3rem;
+    color: var(--mr-text);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/*
+ * Build stamp.
+ *
+ * The page prints the running module version, read from the module registry at request
+ * time; the suffix below is appended by THIS stylesheet. The rendered line therefore
+ * answers two questions at once, by being looked at rather than inferred:
+ *
+ *   both numbers shown, and equal -> the uploaded .omod is the one being served, and its
+ *                                    stylesheet reached the browser
+ *   module number only, no suffix -> correct build, but the stylesheet did not load
+ *   an older number              -> an older .omod is still installed and winning
+ *
+ * This exists because a release was verified, uploaded and hard-reloaded while the server
+ * kept serving the previous one, and nothing on the page could distinguish the two.
+ *
+ * Keep the literal below in step with the module version on every release. A literal is
+ * the point: a value inherited from the page would prove nothing about which stylesheet
+ * the browser actually parsed.
+ */
+.mr-build {
+    margin: 0 0 .35rem;
+    text-align: end;
+    font-size: .72rem;
+    letter-spacing: .02em;
+    color: var(--mr-muted);
+    opacity: .75;
+}
+
+.mr-build::after {
+    content: " - css 1.2.3";
+}
+
+
+/* Page header: title block left, summary/actions right. */
+.mr-page-head,
+.mr-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+    flex-wrap: wrap;
+    padding: 0 0 .9rem;
+    margin: 0 0 1.4rem;
+    border-bottom: 2px solid var(--mr-border);
+}
+
+.mr-page-head h1,
+.mr-header h1 {
+    margin: 0 !important;
+    /* !important: the host app sets `#content h1 { color }`, which would otherwise win. */
+    color: var(--mr-accent) !important;
+    font-size: 1.55rem !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
+}
+
+.mr-sub {
+    margin: .3rem 0 0;
+    color: var(--mr-muted);
+    font-size: .93rem;
+    max-width: 68ch;
+}
+
+.mr-page-head-actions {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+}
+
+/* Result counter, so "how many did I get" is answered before any scrolling. */
+.mr-kpi {
+    background: var(--mr-accent-soft);
+    border: 1px solid var(--mr-border);
+    border-radius: 999px;
+    padding: .35rem .85rem;
+    font-size: .88rem;
+    color: var(--mr-accent);
+    white-space: nowrap;
+}
+
+.mr-kpi strong {
+    font-size: 1.05rem;
+}
+
+/*
+ * Search page: filters in their own column, results in another.
+ * Structural separation is what actually fixes "I cannot tell the filters from the reports" -
+ * no amount of tinting achieves the same thing when both are stacked in one column.
+ */
+.mr-search-layout {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 1.4rem;
+    align-items: start;
+}
+
+.mr-filters {
+    position: sticky;
+    top: 1rem;
+}
+
+@media (max-width: 1000px) {
+    .mr-search-layout { grid-template-columns: minmax(0, 1fr); }
+    .mr-filters { position: static; }
+}
+
+/* Personalisation window keeps its two-column shape. */
+.mr-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 1.4rem;
+    align-items: start;
+}
+
+@media (max-width: 1000px) {
+    .mr-columns { grid-template-columns: minmax(0, 1fr); }
+    .mr-rail { position: static !important; }
+}
+
+.mr-rail {
+    position: sticky;
+    top: 1rem;
+}
+
+/* =====================================================================
+   Cards  (.mr-panel is kept as an alias so existing pages inherit this)
+   ===================================================================== */
+
+.mr-card,
+.mr-panel {
+    background: var(--mr-surface);
+    border: 1px solid var(--mr-border);
+    border-radius: var(--mr-radius);
+    box-shadow: var(--mr-shadow);
+    margin: 0 0 1.2rem;
+    overflow: hidden;
+}
+
+/* The header band. The band is on this div, not on the h2, so the host app's heading rules
+   cannot flatten it (see the note at the top of this file). */
+.mr-card-head,
+.mr-panel > h2 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .7rem 1rem;
+    background: var(--mr-surface-sunken);
+    border-bottom: 1px solid var(--mr-border);
+}
+
+.mr-card-head h2,
+.mr-panel > h2 {
+    margin: 0 !important;
+    color: var(--mr-accent) !important;
+    font-size: .82rem !important;
+    font-weight: 700 !important;
+    letter-spacing: .07em !important;
+    text-transform: uppercase !important;
+}
+
+.mr-card-body,
+.mr-panel-body {
+    padding: 1rem;
+}
+
+.mr-card-body > *:first-child,
+.mr-panel-body > *:first-child {
+    margin-top: 0;
+}
+
+.mr-card-body > *:last-child,
+.mr-panel-body > *:last-child {
+    margin-bottom: 0;
+}
+
+.mr-sep {
+    border: 0;
+    border-top: 1px solid var(--mr-border);
+    margin: 1rem 0;
+}
+
+/* =====================================================================
+   Results region
+   ===================================================================== */
+
+.mr-results-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .75rem;
+    flex-wrap: wrap;
+    padding: 0 .2rem .55rem;
+    margin-bottom: .9rem;
+    border-bottom: 2px solid var(--mr-border);
+}
+
+.mr-results-head h2 {
+    margin: 0 !important;
+    color: var(--mr-text) !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    text-transform: none !important;
+}
+
+/* =====================================================================
+   Report card — the piece the redesign is really about
+   ===================================================================== */
+
+/*
+ * Three tiers, each visually distinct so the eye can skip to what it needs:
+ *   title   — largest, darkest
+ *   meta    — a labelled grid, small and muted; scannable, never confusable with content
+ *   content — a sunken panel with its own rule and generous line-height; it reads as a quote
+ * Previously all three were the same 13-14px muted-ish text, which is why the card was
+ * unreadable.
+ */
+.mr-report {
+    position: relative;
+    background: var(--mr-surface);
+    border: 1px solid var(--mr-border);
+    border-left: 4px solid var(--mr-border-strong);
+    border-radius: var(--mr-radius);
+    box-shadow: var(--mr-shadow);
+    padding: .9rem 1.05rem 1rem;
+    margin: 0 0 1rem;
+}
+
+.mr-report:hover {
+    box-shadow: var(--mr-shadow-lift);
+}
+
+.mr-report.mr-own    { border-left-color: var(--mr-accent); }
+.mr-report.mr-removed{ border-left-color: var(--mr-danger); background: #fdfbfb; }
+
+.mr-report-head {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    flex-wrap: wrap;
+    margin-bottom: .55rem;
+}
+
+.mr-report-title {
+    margin: 0 !important;
+    color: var(--mr-text) !important;
+    font-size: 1.06rem !important;
+    font-weight: 700 !important;
+    line-height: 1.3 !important;
+    text-transform: none !important;
+}
+
+/* --- metadata grid --------------------------------------------------- */
+
+.mr-report-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem 1.6rem;
+    margin: 0 0 .7rem;
+    padding: .5rem .7rem;
+    background: var(--mr-surface-sunken);
+    border-radius: var(--mr-radius-sm);
+}
+
+.mr-report-meta > div {
+    display: flex;
+    align-items: baseline;
+    gap: .4rem;
+    min-width: 0;
+}
+
+.mr-report-meta dt {
+    margin: 0;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--mr-faint);
+    white-space: nowrap;
+}
+
+.mr-report-meta dd {
+    margin: 0;
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--mr-text);
+}
+
+/* Patient / study identifiers: monospace so digits line up and are obviously an id. */
+.mr-ident {
+    font-family: var(--chu-font-mono, "SFMono-Regular", Consolas, "Liberation Mono", monospace);
+    font-size: .8rem;
+    font-weight: 400;
+    color: var(--mr-muted);
+    background: #fff;
+    border: 1px solid var(--mr-border);
+    border-radius: 3px;
+    padding: 0 .35rem;
+    margin-left: .3rem;
+}
+
+/* --- the clinical text ------------------------------------------------ */
+
+.mr-report-text {
+    white-space: pre-wrap;
+    margin: 0 0 .7rem;
+    padding: .65rem .85rem;
+    background: #fcfdfe;
+    border: 1px solid var(--mr-border);
+    border-left: 3px solid var(--mr-accent-soft);
+    border-radius: var(--mr-radius-sm);
+    font-size: .95rem;
+    line-height: 1.62;
+    color: var(--mr-text);
+}
+
+/* --- covered images --------------------------------------------------- */
+
+.mr-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    margin: 0 0 .2rem;
+}
+
+.mr-image-chip {
+    font-size: .78rem;
+    background: var(--mr-accent-soft);
+    border: 1px solid #cddceb;
+    border-radius: 999px;
+    padding: .15rem .6rem;
+    color: var(--mr-accent);
+    white-space: nowrap;
+}
+
+/* --- actions ---------------------------------------------------------- */
+
+/*
+ * `gap` is the fix for the buttons running into each other in the deployed page: they were
+ * inline anchors with no margin, so "Télécharger" and "Ouvrir…" rendered as one word.
+ */
+.mr-report-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    margin-top: .8rem;
+    padding-top: .7rem;
+    border-top: 1px solid var(--mr-border);
+}
+
+/* =====================================================================
+   Tags
+   ===================================================================== */
+
+.mr-tag {
+    display: inline-block;
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: .18rem .5rem;
+    border-radius: 999px;
+    background: var(--mr-accent-soft);
+    color: var(--mr-accent);
+    border: 1px solid #cddceb;
+    white-space: nowrap;
+}
+
+.mr-tag-own     { background: var(--mr-ok-soft); color: var(--mr-ok); border-color: #bcdcc8; }
+.mr-tag-removed { background: var(--mr-danger-soft); color: var(--mr-danger); border-color: #e8bcbc; }
+
+.mr-count {
+    display: inline-block;
+    font-size: .74rem;
+    font-weight: 600;
+    color: var(--mr-muted);
+    background: var(--mr-surface-sunken);
+    border: 1px solid var(--mr-border);
+    border-radius: 999px;
+    padding: .05rem .5rem;
+    margin-left: .35rem;
+}
+
+/* =====================================================================
+   Buttons
+   ===================================================================== */
+
+.mr-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    min-height: 34px;
+    padding: .42rem .9rem;
+    border: 1px solid var(--mr-border-strong);
+    border-radius: var(--mr-radius-sm);
+    background: var(--mr-surface);
+    color: var(--mr-accent);
+    font-size: .88rem;
+    font-weight: 600;
+    font-family: inherit;
+    line-height: 1.3;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.mr-btn:hover:not(:disabled):not([disabled]) {
+    background: var(--mr-accent-soft);
+    border-color: var(--mr-accent);
+    color: var(--mr-accent-dark);
+    text-decoration: none;
+}
+
+.mr-btn:focus-visible {
+    outline: 2px solid var(--mr-accent);
+    outline-offset: 2px;
+}
+
+.mr-btn-primary {
+    background: var(--mr-accent);
+    border-color: var(--mr-accent);
+    color: #fff;
+}
+
+.mr-btn-primary:hover:not(:disabled):not([disabled]) {
+    background: var(--mr-accent-dark);
+    border-color: var(--mr-accent-dark);
+    color: #fff;
+}
+
+.mr-btn-danger {
+    border-color: #d9a3a3;
+    color: var(--mr-danger);
+}
+
+.mr-btn-danger:hover:not(:disabled):not([disabled]) {
+    background: var(--mr-danger-soft);
+    border-color: var(--mr-danger);
+    color: var(--mr-danger);
+}
+
+.mr-btn-small {
+    min-height: 28px;
+    padding: .22rem .6rem;
+    font-size: .81rem;
+}
+
+.mr-btn-block {
+    width: 100%;
+}
+
+/* Disabled buttons stay visible and keep their title= tooltip: "why is this greyed out" is
+   the most common question in a permissioned UI, and hiding the control answers it worse. */
+.mr-btn:disabled,
+.mr-btn[disabled] {
+    opacity: .5;
+    cursor: not-allowed;
+    background: var(--mr-surface-sunken);
+    color: var(--mr-muted);
+    border-color: var(--mr-border);
+}
+
+.mr-link-btn {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--mr-accent);
+    font-size: .82rem;
+    font-family: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.mr-toolbar {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Toolbar strip between a card header and its body. */
+.mr-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    flex-wrap: wrap;
+    padding: .65rem 1rem;
+    background: var(--mr-surface);
+    border-bottom: 1px solid var(--mr-border);
+}
+
+.mr-toolbar-spacer {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* =====================================================================
+   Form controls
+   ===================================================================== */
+
+.mr-field {
+    margin-bottom: 1rem;
+}
+
+.mr-field > label,
+.mr-label {
+    display: block;
+    font-weight: 700;
+    font-size: .74rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--mr-muted);
+    margin-bottom: .35rem;
+}
+
+.mr-input,
+.mr-select,
+.mr-textarea {
+    width: 100%;
+    padding: .45rem .6rem;
+    border: 1px solid var(--mr-border-strong);
+    border-radius: var(--mr-radius-sm);
+    font-size: .9rem;
+    font-family: inherit;
+    background: var(--mr-surface);
+    color: var(--mr-text);
+    box-sizing: border-box;
+}
+
+.mr-input:focus,
+.mr-select:focus,
+.mr-textarea:focus {
+    outline: 2px solid var(--mr-accent);
+    outline-offset: -1px;
+    border-color: var(--mr-accent);
+}
+
+.mr-textarea {
+    min-height: 190px;
+    line-height: 1.6;
+    resize: vertical;
+}
+
+.mr-textarea-short {
+    min-height: 110px;
+}
+
+.mr-inline-label {
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--mr-muted);
+    white-space: nowrap;
+}
+
+.mr-select-inline {
+    width: auto;
+    min-width: 200px;
+    max-width: 330px;
+}
+
+/* Segmented control (language / format): every option visible at once. */
+.mr-segment {
+    display: flex;
+    border: 1px solid var(--mr-border-strong);
+    border-radius: var(--mr-radius-sm);
+    overflow: hidden;
+}
+
+.mr-segment button {
+    flex: 1;
+    min-height: 32px;
+    padding: .35rem .3rem;
+    border: 0;
+    border-right: 1px solid var(--mr-border);
+    background: var(--mr-surface);
+    color: var(--mr-text);
+    font-size: .85rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.mr-segment button:last-child { border-right: 0; }
+
+.mr-segment button[aria-pressed="true"] {
+    background: var(--mr-accent);
+    color: #fff;
+    font-weight: 700;
+}
+
+.mr-segment button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.mr-check {
+    display: flex;
+    align-items: flex-start;
+    gap: .45rem;
+    padding: .22rem 0;
+    font-size: .87rem;
+    cursor: pointer;
+}
+
+.mr-check input {
+    margin: .2rem 0 0;
+    flex-shrink: 0;
+}
+
+.mr-check-inline {
+    white-space: nowrap;
+    padding: 0;
+}
+
+/* --- switch ----------------------------------------------------------- */
+
+.mr-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    cursor: pointer;
+    font-size: .87rem;
+    user-select: none;
+}
+
+.mr-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.mr-switch-track {
+    position: relative;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 19px;
+    border-radius: 999px;
+    background: #c2ced9;
+    transition: background .15s ease-in-out;
+}
+
+.mr-switch-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .25);
+    transition: transform .15s ease-in-out;
+}
+
+.mr-switch input:checked + .mr-switch-track { background: var(--mr-accent); }
+.mr-switch input:checked + .mr-switch-track::after { transform: translateX(15px); }
+.mr-switch input:focus-visible + .mr-switch-track { outline: 2px solid var(--mr-accent); outline-offset: 2px; }
+
+.mr-switch-label { color: var(--mr-text); }
+
+.mr-switch-sm .mr-switch-track { width: 30px; height: 17px; }
+.mr-switch-sm .mr-switch-track::after { width: 13px; height: 13px; }
+.mr-switch-sm input:checked + .mr-switch-track::after { transform: translateX(13px); }
+
+@media (prefers-reduced-motion: reduce) {
+    .mr-switch-track,
+    .mr-switch-track::after { transition: none; }
+}
+
+/* =====================================================================
+   Token field  —  search-as-you-type multi-select
+   =====================================================================
+   Replaces the checkbox lists. A checkbox per author and per image works for a demo and
+   collapses completely at real scale: a department has tens of clinicians and Orthanc holds
+   thousands of studies, and no one scrolls a 2000-row checkbox list. Here the chosen values
+   are chips and the input queries the server, so the widget's size is bounded by the
+   selection rather than by the catalogue.
+   ===================================================================== */
+
+.mr-tokenfield {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .3rem;
+    padding: .3rem .35rem;
+    border: 1px solid var(--mr-border-strong);
+    border-radius: var(--mr-radius-sm);
+    background: var(--mr-surface);
+    cursor: text;
+    min-height: 36px;
+}
+
+.mr-tokenfield:focus-within {
+    border-color: var(--mr-accent);
+    outline: 2px solid var(--mr-accent);
+    outline-offset: -1px;
+}
+
+.mr-token {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    max-width: 100%;
+    background: var(--mr-accent-soft);
+    border: 1px solid #cddceb;
+    border-radius: 999px;
+    padding: .1rem .25rem .1rem .55rem;
+    font-size: .8rem;
+    color: var(--mr-accent);
+}
+
+.mr-token > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mr-token button {
+    border: 0;
+    background: none;
+    color: var(--mr-accent);
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 .2rem;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.mr-token button:hover { background: #cddceb; }
+
+.mr-token-input {
+    flex: 1 1 7rem;
+    min-width: 6rem;
+    border: 0;
+    outline: none;
+    padding: .25rem .2rem;
+    font-size: .87rem;
+    font-family: inherit;
+    color: var(--mr-text);
+    background: transparent;
+}
+
+/* Suggestion list. Positioned in flow rather than absolutely: inside a sticky sidebar an
+   absolutely-positioned dropdown gets clipped by the card's overflow, and debugging that in
+   a hospital is nobody's idea of a good afternoon. */
+.mr-suggest {
+    margin-top: .3rem;
+    border: 1px solid var(--mr-border);
+    border-radius: var(--mr-radius-sm);
+    background: var(--mr-surface);
+    box-shadow: var(--mr-shadow);
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.mr-suggest[hidden] { display: none; }
+
+.mr-suggest-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    border-bottom: 1px solid var(--mr-surface-sunken);
+    background: none;
+    padding: .42rem .6rem;
+    font-size: .86rem;
+    font-family: inherit;
+    color: var(--mr-text);
+    cursor: pointer;
+}
+
+.mr-suggest-item:last-child { border-bottom: 0; }
+
+.mr-suggest-item:hover,
+.mr-suggest-item.mr-suggest-active {
+    background: var(--mr-accent-soft);
+}
+
+.mr-suggest-item strong {
+    color: var(--mr-accent);
+}
+
+.mr-suggest-item .mr-meta {
+    display: block;
+    font-size: .76rem;
+}
+
+.mr-suggest-more,
+.mr-suggest-empty {
+    padding: .45rem .6rem;
+    font-size: .78rem;
+    font-style: italic;
+    color: var(--mr-muted);
+    background: var(--mr-surface-sunken);
+}
+
+/* =====================================================================
+   Selection tree (personalisation window)
+   ===================================================================== */
+
+.mr-tree-tools {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: .8rem;
+    padding-bottom: .8rem;
+    border-bottom: 1px solid var(--mr-border);
+}
+
+.mr-tree-tools .mr-input {
+    flex: 1;
+    min-width: 170px;
+    width: auto;
+}
+
+.mr-group { margin-bottom: 1.2rem; }
+
+.mr-group-label {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--mr-faint);
+    margin: 0 0 .4rem;
+    font-weight: 700;
+}
+
+.mr-node {
+    border: 1px solid var(--mr-border);
+    border-radius: var(--mr-radius-sm);
+    margin-bottom: .45rem;
+    background: var(--mr-surface);
+}
+
+.mr-node-head {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .65rem;
+}
+
+.mr-node-head:hover { background: var(--mr-surface-sunken); }
+
+.mr-twisty {
+    border: 0;
+    background: none;
+    cursor: pointer;
+    color: var(--mr-muted);
+    font-size: .8rem;
+    width: 1.3rem;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.mr-twisty.mr-empty { visibility: hidden; }
+
+.mr-node-title {
+    flex: 1;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: .9rem;
+    min-width: 0;
+}
+
+.mr-node-desc {
+    display: block;
+    font-weight: 400;
+    font-size: .78rem;
+    color: var(--mr-muted);
+    margin-top: .12rem;
+}
+
+.mr-node-body {
+    padding: .1rem .65rem .65rem 2.4rem;
+    border-top: 1px solid var(--mr-surface-sunken);
+}
+
+.mr-node-body[hidden] { display: none; }
+
+.mr-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: .05rem .9rem;
+    margin-top: .45rem;
+}
+
+/* Bounded, scrollable pick lists (image picker in the editor). */
+.mr-picker {
+    border: 1px solid var(--mr-border);
+    border-radius: var(--mr-radius-sm);
+    padding: .4rem .65rem;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--mr-surface);
+}
+
+.mr-picker .mr-check { border-bottom: 1px solid var(--mr-surface-sunken); }
+.mr-picker .mr-check:last-child { border-bottom: 0; }
+
+.mr-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+}
+
+/* =====================================================================
+   Summary rail
+   ===================================================================== */
+
+.mr-summary-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: .86rem;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.mr-summary-list li {
+    padding: .28rem 0;
+    border-bottom: 1px solid var(--mr-surface-sunken);
+    display: flex;
+    justify-content: space-between;
+    gap: .5rem;
+}
+
+.mr-summary-list li:last-child { border-bottom: 0; }
+
+/* =====================================================================
+   Notices
+   ===================================================================== */
+
+.mr-note {
+    border-radius: var(--mr-radius-sm);
+    padding: .6rem .85rem;
+    font-size: .88rem;
+    margin: 0 0 .9rem;
+    border: 1px solid transparent;
+    border-left-width: 4px;
+}
+
+.mr-note-info  { background: var(--mr-accent-soft); border-color: #bdd2e6; color: var(--mr-accent-dark); }
+.mr-note-warn  { background: var(--mr-warn-soft);   border-color: #e3c489; color: var(--mr-warn); }
+.mr-note-error { background: var(--mr-danger-soft); border-color: #e0a8a8; color: var(--mr-danger); }
+.mr-note-ok    { background: var(--mr-ok-soft);     border-color: #a9d3ba; color: var(--mr-ok); }
+
+.mr-access-denied {
+    max-width: 620px;
+    margin: 3rem auto;
+    text-align: center;
+    border: 1px solid #e0a8a8;
+    border-radius: var(--mr-radius);
+    background: var(--mr-danger-soft);
+    color: var(--mr-danger);
+    padding: 1.6rem;
+}
+
+.mr-empty {
+    color: var(--mr-muted);
+    font-style: italic;
+    padding: 2rem 1rem;
+    text-align: center;
+    margin: 0;
+}
+
+.mr-meta {
+    font-size: .82rem;
+    color: var(--mr-muted);
+}
+
+.mr-meta strong { color: var(--mr-text); }
+
+/* =====================================================================
+   Patient identity chip
+   ===================================================================== */
+
+.mr-patient-chip {
+    background: var(--mr-accent-soft);
+    border: 1px solid #cddceb;
+    border-radius: var(--mr-radius);
+    padding: .6rem .9rem;
+    font-size: .88rem;
+    line-height: 1.5;
+}
+
+.mr-patient-chip strong {
+    color: var(--mr-accent);
+    font-size: .98rem;
+}
+
+/* =====================================================================
+   Dialogs
+   ===================================================================== */
+
+.mr-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(16, 26, 36, .58);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+    padding: 1.5rem;
+}
+
+.mr-overlay[hidden] { display: none; }
+
+.mr-dialog {
+    background: var(--mr-surface);
+    border-radius: var(--mr-radius);
+    width: min(1000px, 100%);
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, .35);
+}
+
+.mr-dialog-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .8rem 1.1rem;
+    background: var(--mr-accent);
+}
+
+.mr-dialog-head h2 {
+    margin: 0 !important;
+    color: #fff !important;
+    font-size: 1.02rem !important;
+    font-weight: 700 !important;
+    text-transform: none !important;
+}
+
+.mr-dialog-close {
+    background: none;
+    border: 0;
+    color: #fff;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 .3rem;
+}
+
+.mr-dialog-body {
+    padding: 1.1rem;
+    overflow-y: auto;
+}
+
+.mr-dialog-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: .6rem;
+    padding: .8rem 1.1rem;
+    border-top: 1px solid var(--mr-border);
+    background: var(--mr-surface-sunken);
+}
+
+.mr-preview-frame {
+    width: 100%;
+    height: 72vh;
+    border: 1px solid var(--mr-border);
+    border-radius: var(--mr-radius-sm);
+    background: var(--mr-surface-sunken);
+}
+
+/* =====================================================================
+   Tables
+   ===================================================================== */
+
+.mr-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .86rem;
+}
+
+.mr-table th,
+.mr-table td {
+    text-align: left;
+    padding: .45rem .6rem;
+    border-bottom: 1px solid var(--mr-border);
+    vertical-align: top;
+}
+
+.mr-table th {
+    background: var(--mr-surface-sunken);
+    color: var(--mr-muted);
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.mr-table tr:hover td { background: #fafcfe; }
+
+.mr-scroll { overflow-x: auto; }
+
+/* =====================================================================
+   Misc
+   ===================================================================== */
+
+.mr-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, .4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: mr-spin .7s linear infinite;
+}
+
+.mr-btn:not(.mr-btn-primary) .mr-spinner {
+    border-color: rgba(31, 78, 121, .3);
+    border-top-color: var(--mr-accent);
+}
+
+@keyframes mr-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .mr-spinner { animation-duration: 2s; }
+}
+
+.mr-entry-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: var(--mr-accent-soft);
+    border: 1px solid #cddceb;
+    border-left: 4px solid var(--mr-accent);
+    border-radius: var(--mr-radius);
+    padding: .8rem 1.1rem;
+    margin: 0 0 1.2rem;
+    font-size: 14px;
+    color: var(--mr-text);
+}
+
+.mr-entry-banner strong {
+    color: var(--mr-accent);
+    font-size: .98rem;
+}
+
+.mr-entry-hint {
+    display: block;
+    color: var(--mr-muted);
+    font-size: .85rem;
+    margin-top: .15rem;
+}
+
+.mr-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}

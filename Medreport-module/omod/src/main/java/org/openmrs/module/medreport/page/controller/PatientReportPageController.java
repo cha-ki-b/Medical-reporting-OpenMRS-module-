@@ -1,5 +1,6 @@
 package org.openmrs.module.medreport.page.controller;
 
+import org.openmrs.module.medreport.web.MedreportBuild;
 import org.openmrs.Patient;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.medreport.MedreportConstants;
@@ -20,6 +21,8 @@ public class PatientReportPageController {
 
     public void controller(PageModel model,
                            @RequestParam("patientId") String patientUuid) {
+        // Printed on the page so the running build is visible without guessing (see MedreportBuild).
+        model.addAttribute("buildStamp", MedreportBuild.version());
         Patient patient = Context.getPatientService().getPatientByUuid(patientUuid);
         model.addAttribute("patient", patient);
 
